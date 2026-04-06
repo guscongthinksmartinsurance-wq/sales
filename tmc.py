@@ -6,7 +6,7 @@ import pytz
 import os
 import urllib.parse
 
-# --- 1. CẤU HÌNH HỆ THỐNG & CSS ---
+# --- 1. CẤU HÌNH HỆ THỐNG & CSS NÂNG CAO ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
@@ -28,8 +28,6 @@ st.markdown("""
         padding: 8px 15px; border-radius: 8px; background: #f1f5f9;
         font-size: 13px; display: inline-block; margin-right: 5px; margin-bottom: 8px;
     }
-    .action-link:hover { background: #0ea5e9; color: white; }
-    
     .db-card {
         background: white; padding: 20px; border-radius: 12px;
         border-top: 5px solid #00263e; text-align: center;
@@ -40,7 +38,7 @@ st.markdown("""
         border-left: 3px solid #cbd5e1; height: 165px;
         overflow-y: auto; font-size: 14px; line-height: 1.6;
     }
-    /* Fix Popover Sửa */
+    /* Fix Popover Sửa sạch sẽ */
     button[data-testid="stPopoverTarget"] svg { display: none !important; }
     button[data-testid="stPopoverTarget"] p { font-weight: 700 !important; }
     .section-tag {
@@ -58,11 +56,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, crm_id TEXT, crm_link TEXT, cell TEXT, work TEXT, email TEXT, state TEXT, owner TEXT, tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    # Cập nhật cột nếu thiếu
-    cols = [('crm_link','TEXT'),('work','TEXT'),('email','TEXT'),('tags','TEXT'),('last_updated','TEXT')]
-    for col, ctype in cols:
-        try: c.execute(f"ALTER TABLE leads ADD COLUMN {col} {ctype}")
-        except: pass
     conn.commit(); conn.close()
 
 init_db()
@@ -109,9 +102,10 @@ if selected == "Trang Chủ":
     st.markdown(f"<h2 style='text-align:center; color:#00263e;'>{prof.get('slogan')}</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown("<div class='db-card'><h3>Tập đoàn National Life</h3><p style='color:#64748b;'>Uy tín từ 1848</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='db-card'><h3>National Life Group</h3><p style='color:#64748b;'>Phục vụ từ 1848 - Giá trị bền bỉ</p></div>", unsafe_allow_html=True)
         if prof.get('img_national'): st.image(prof['img_national'], use_container_width=True)
     with c2:
+        # HIỆN ĐẦY ĐỦ MÔ TẢ (SLOGAN) DƯỚI ĐÂY
         st.markdown(f"<div class='db-card'><h3>Giải pháp IUL</h3><p style='color:#64748b;'>{prof.get('slogan')}</p></div>", unsafe_allow_html=True)
         if prof.get('img_iul'): st.image(prof['img_iul'], use_container_width=True)
     
@@ -127,7 +121,7 @@ elif selected == "Vận Hành":
     tab_list, tab_add = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
     
     with tab_list:
-        q_s = st.text_input("🔍 Tìm kiếm...", placeholder="Tên, số điện thoại...")
+        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại...")
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
         for idx, row in filtered.iterrows():
             u_key = f"ld_{row['id']}"; c_cell = clean_phone(row['cell']); c_work = clean_phone(row.get('work',''))
@@ -151,11 +145,11 @@ elif selected == "Vận Hành":
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
-                # Tách nút Lưu và Sửa (Đủ 10 trường)
-                c_n, c_s = st.columns([8.2, 1.8])
+                # Nút Lưu và Sửa (Tách biệt hoàn toàn, đầy đủ 10 trường)
+                c_n, c_s = st.columns([8, 2])
                 with c_n:
                     with st.form(key=f"nt_{u_key}", clear_on_submit=True):
-                        ni = st.text_input("Ghi nhanh...", label_visibility="collapsed")
+                        ni = st.text_input("Ghi nhanh tương tác...", label_visibility="collapsed")
                         if st.form_submit_button("LƯU GHI CHÚ", use_container_width=True):
                             t_str = n_ny.strftime('[%m/%d %H:%M]')
                             new_n = f"<div class='history-entry'><span>{t_str}</span> {ni}</div>" + str(row['note'])
@@ -165,13 +159,13 @@ elif selected == "Vận Hành":
                     with st.popover("⚙️ SỬA", use_container_width=True):
                         with st.form(f"f_ed_{u_key}"):
                             st.markdown("<div class='section-tag'>HỒ SƠ</div>", unsafe_allow_html=True)
-                            un = st.text_input("Tên khách", row['name'])
+                            un = st.text_input("Họ tên", row['name'])
                             e1, e2 = st.columns(2); ui = e1.text_input("CRM ID", row['crm_id']); ul = e2.text_input("CRM Link", row['crm_link'])
                             st.markdown("<div class='section-tag'>LIÊN LẠC</div>", unsafe_allow_html=True)
                             e3, e4 = st.columns(2); uc = e3.text_input("Cell Phone", row['cell']); uw = e4.text_input("Work Phone", row.get('work',''))
                             ue = st.text_input("Email", row.get('email',''))
-                            st.markdown("<div class='section-tag'>QUẢN TRỊ</div>", unsafe_allow_html=True)
-                            e5, e6 = st.columns(2); us = e5.text_input("State", row.get('state','')); uo = e6.text_input("Owner", row['owner'])
+                            st.markdown("<div class='section-tag'>PHÂN LOẠI</div>", unsafe_allow_html=True)
+                            e5, e6 = st.columns(2); us = e5.text_input("Bang (State)", row.get('state','')); uo = e6.text_input("Owner", row['owner'])
                             utg = st.text_input("Tags", row.get('tags',''))
                             st_l = ["New", "Contacted", "Following", "Closed"]
                             ust = st.selectbox("Status", st_l, index=st_l.index(row['status']) if row['status'] in st_l else 0)
