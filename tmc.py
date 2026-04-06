@@ -12,7 +12,7 @@ NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
 DB_NAME = "tmc_database.db"
 
-# CSS Elite: Fix đè nút, tẩy phèn, hiện mô tả rõ nét
+# CSS Elite: Fix đè nút, tẩy phèn, căn chỉnh khoảng cách
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -57,7 +57,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, crm_id TEXT, crm_link TEXT, cell TEXT, work TEXT, email TEXT, state TEXT, owner TEXT, tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    # Đảm bảo đủ cột
     for col in [('crm_link','TEXT'),('work','TEXT'),('email','TEXT'),('tags','TEXT'),('last_updated','TEXT')]:
         try: c.execute(f"ALTER TABLE leads ADD COLUMN {col[0]} {col[1]}")
         except: pass
@@ -102,16 +101,21 @@ with st.sidebar:
             st.session_state.authenticated = False; st.rerun()
     else: selected = "Trang Chủ"
 
-# --- 4. HIỂN THỊ PHÂN HỆ ---
+# --- 4. HIỂN THỊ CHI TIẾT ---
 if selected == "Trang Chủ":
     st.markdown(f"<h2 style='text-align:center; color:#00263e;'>{prof.get('slogan')}</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown("<div class='db-card'><h3>National Life Group</h3><p style='color:#64748b; font-size:14px;'>Cung cấp sự an tâm tài chính từ năm 1848. Chúng tôi cam kết mang lại giá trị bền vững cho khách hàng Việt tại Mỹ.</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='db-card'><h3>National Life Group</h3></div>", unsafe_allow_html=True)
+        # HÌNH ẢNH TRÊN - MÔ TẢ DƯỚI
         if prof.get('img_national'): st.image(prof['img_national'], use_container_width=True)
+        st.markdown("<p style='color:#64748b; font-size:14px; margin-top:10px;'>Cung cấp sự an tâm tài chính từ năm 1848. Chúng tôi cam kết mang lại giá trị bền vững cho cộng đồng.</p>", unsafe_allow_html=True)
+        
     with c2:
-        st.markdown(f"<div class='db-card'><h3>Giải pháp IUL</h3><p style='color:#64748b; font-size:14px;'>{prof.get('slogan')}</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='db-card'><h3>Giải pháp IUL</h3></div>", unsafe_allow_html=True)
+        # HÌNH ẢNH TRÊN - MÔ TẢ DƯỚI
         if prof.get('img_iul'): st.image(prof['img_iul'], use_container_width=True)
+        st.markdown(f"<p style='color:#64748b; font-size:14px; margin-top:10px;'>{prof.get('slogan')}</p>", unsafe_allow_html=True)
     
     if not st.session_state.authenticated:
         with st.expander("🔐 QUẢN TRỊ"):
@@ -122,10 +126,10 @@ if selected == "Trang Chủ":
 elif selected == "Vận Hành":
     conn = sqlite3.connect(DB_NAME)
     df_m = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    tab_list, tab_add = st.tabs(["📊 DANH SÁCH LEAD (10 TRƯỜNG)", "➕ THÊM HỒ SƠ MỚI"])
+    tab_list, tab_add = st.tabs(["📊 QUẢN LÝ DANH SÁCH", "➕ TIẾP NHẬN HỒ SƠ"])
     
     with tab_list:
-        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại, bang...")
+        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại...")
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
         for idx, row in filtered.iterrows():
             u_key = f"ld_{row['id']}"; c_cell = clean_phone(row['cell']); c_work = clean_phone(row.get('work',''))
@@ -135,9 +139,7 @@ elif selected == "Vận Hành":
                     <div style="display: flex; justify-content: space-between;">
                         <div style="flex: 4.8;">
                             <div class="client-title">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none; color:#0ea5e9;">🆔 {row['crm_id']}</a></div>
-                            <div style="margin: 10px 0; font-size: 14px; color:#64748b;">
-                                📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b> | 🏷️ <i>{row.get('tags','')}</i>
-                            </div>
+                            <div style="margin: 10px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b> | 🏷️ <i>{row.get('tags','')}</i></div>
                             <div style="margin-top:12px;">
                                 <a href="tel:{c_cell}" class="action-link">📞 {c_cell}</a>
                                 <a href="rcmobile://call?number={c_cell}" class="action-link">RC Cell</a>
@@ -163,11 +165,11 @@ elif selected == "Vận Hành":
                 with c_s:
                     with st.popover("⚙️ SỬA", use_container_width=True):
                         with st.form(f"f_ed_{u_key}"):
-                            st.markdown("<div class='section-tag'>HỒ SƠ CHÍNH</div>", unsafe_allow_html=True)
+                            st.markdown("<div class='section-tag'>HỒ SƠ</div>", unsafe_allow_html=True)
                             un = st.text_input("Tên", row['name'])
-                            e1, e2 = st.columns(2); ui = e1.text_input("CRM ID", row['crm_id']); ul = e2.text_input("CRM Link", row['crm_link'])
+                            e1, e2 = st.columns(2); ui = e1.text_input("ID", row['crm_id']); ul = e2.text_input("Link", row['crm_link'])
                             st.markdown("<div class='section-tag'>LIÊN LẠC</div>", unsafe_allow_html=True)
-                            e3, e4 = st.columns(2); uc = e3.text_input("Cell Phone", row['cell']); uw = e4.text_input("Work Phone", row.get('work',''))
+                            e3, e4 = st.columns(2); uc = e3.text_input("Cell", row['cell']); uw = e4.text_input("Work", row.get('work',''))
                             ue = st.text_input("Email", row.get('email',''))
                             st.markdown("<div class='section-tag'>PHÂN LOẠI</div>", unsafe_allow_html=True)
                             e5, e6 = st.columns(2); us = e5.text_input("State", row.get('state','')); uo = e6.text_input("Owner", row['owner'])
@@ -180,12 +182,12 @@ elif selected == "Vận Hành":
                                 conn.commit(); st.rerun()
 
     with tab_add:
-        st.markdown("### ➕ THÊM HỒ SƠ MỚI (10 TRƯỜNG)")
+        st.markdown("### ➕ TIẾP NHẬN HỒ SƠ MỚI (ĐỦ 10 TRƯỜNG)")
         with st.form("add_new_lead_full", clear_on_submit=True):
-            r1 = st.columns(3); an = r1[0].text_input("Họ và Tên"); ai = r1[1].text_input("CRM ID"); al = r1[2].text_input("CRM Link")
-            r2 = st.columns(3); ac = r2[0].text_input("Số Cell"); aw = r2[1].text_input("Số Work"); ae = r2[2].text_input("Địa chỉ Email")
-            r3 = st.columns(3); as_ = r3[0].text_input("Tiểu bang (State)"); ao = r3[1].text_input("Owner", value="Cong"); at = r3[2].text_input("Thẻ (Tags)")
-            ast = st.selectbox("Trạng thái", ["New", "Contacted", "Following", "Closed"])
+            r1 = st.columns(3); an = r1[0].text_input("Họ tên"); ai = r1[1].text_input("ID"); al = r1[2].text_input("Link")
+            r2 = st.columns(3); ac = r2[0].text_input("Cell"); aw = r2[1].text_input("Work"); ae = r2[2].text_input("Email")
+            r3 = st.columns(3); as_ = r3[0].text_input("State"); ao = r3[1].text_input("Owner", value="Cong"); at = r3[2].text_input("Tags")
+            ast = st.selectbox("Status", ["New", "Contacted", "Following", "Closed"])
             if st.form_submit_button("LƯU HỒ SƠ", use_container_width=True):
                 if an and ac:
                     conn.execute("INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, status, last_updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -203,11 +205,11 @@ elif selected == "Mắt Thần":
     conn.close()
 
 elif selected == "Cấu Hình":
-    st.markdown("<h2>⚙️ Cấu Hình Hệ Thống</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>⚙️ Cấu Hình</h2>", unsafe_allow_html=True)
     with st.form("config"):
-        new_sl = st.text_input("Slogan dòng IUL", value=prof.get('slogan'))
-        c1, c2, c3 = st.columns(3); up_l = c1.file_uploader("Logo Sidebar"); up_n = c2.file_uploader("Ảnh National"); up_i = c3.file_uploader("Ảnh IUL")
-        if st.form_submit_button("LƯU THAY ĐỔI"):
+        new_sl = st.text_input("Slogan", value=prof.get('slogan'))
+        c1, c2, c3 = st.columns(3); up_l = c1.file_uploader("Logo"); up_n = c2.file_uploader("Ảnh Nat"); up_i = c3.file_uploader("Ảnh IUL")
+        if st.form_submit_button("LƯU"):
             conn = sqlite3.connect(DB_NAME)
             if up_l:
                 with open("logo_app.png", "wb") as f: f.write(up_l.getbuffer())
