@@ -6,12 +6,13 @@ import pytz
 import os
 import urllib.parse
 
-# --- 1. CẤU HÌNH & CSS (CHỈ GIỮ CSS CƠ BẢN, KHÔNG ẨN ICON) ---
+# --- 1. CẤU HÌNH HỆ THỐNG & CSS CƠ BẢN (KHÔNG ẨN ICON, KHÔNG ĐÈ CHỮ) ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
 DB_NAME = "tmc_database.db"
 
+# Chỉ giữ lại CSS tạo khung và màu sắc, không can thiệp vào nút bấm mặc định
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -20,7 +21,7 @@ st.markdown("""
     
     /* Card tại Trang Chủ */
     .home-card {
-        background: white; padding: 20px; border-radius: 15px; 
+        background: white; padding: 25px; border-radius: 15px; 
         border-top: 5px solid #00263e; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         text-align: center; margin-bottom: 20px;
     }
@@ -60,6 +61,10 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, crm_id TEXT, crm_link TEXT, cell TEXT, work TEXT, email TEXT, state TEXT, owner TEXT, tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
+    # Bổ sung cột nếu thiếu
+    for col in [('crm_link','TEXT'),('work','TEXT'),('email','TEXT'),('tags','TEXT'),('last_updated','TEXT')]:
+        try: c.execute(f"ALTER TABLE leads ADD COLUMN {col[0]} {col[1]}")
+        except: pass
     conn.commit(); conn.close()
 
 init_db()
@@ -79,6 +84,7 @@ if 'authenticated' not in st.session_state: st.session_state.authenticated = Fal
 with st.sidebar:
     logo = prof.get('logo_app')
     st.image(logo if logo and os.path.exists(logo) else "https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+    st.divider()
     if st.session_state.authenticated:
         from streamlit_option_menu import option_menu
         selected = option_menu(None, ["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"], styles={"nav-link-selected": {"background-color": "#00263e"}})
@@ -93,25 +99,25 @@ if selected == "Trang Chủ":
     with c1:
         st.markdown("<div class='home-card'><h3>National Life Group</h3></div>", unsafe_allow_html=True)
         if prof.get('img_national'): st.image(prof['img_national'], use_container_width=True)
-        st.markdown("<p style='color:#64748b; margin-top:10px;'>Cung cấp sự an tâm tài chính từ năm 1848.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748b; margin-top:15px; font-size:15px;'>Cung cấp sự an tâm tài chính từ năm 1848.</p>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div class='home-card' style='border-top-color:#00a9e0;'><h3>Giải pháp IUL</h3></div>", unsafe_allow_html=True)
         if prof.get('img_iul'): st.image(prof['img_iul'], use_container_width=True)
-        st.markdown(f"<p style='color:#64748b; margin-top:10px;'>{prof.get('slogan')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#64748b; margin-top:15px; font-size:15px;'>{prof.get('slogan')}</p>", unsafe_allow_html=True)
     
     if not st.session_state.authenticated:
         with st.expander("🔐 ĐĂNG NHẬP QUẢN TRỊ"):
-            u = st.text_input("Username", key="u_l"); p = st.text_input("Password", type="password", key="p_l")
+            u = st.text_input("User", key="u_login"); p = st.text_input("Pass", type="password", key="p_login")
             if st.button("XÁC NHẬN"):
                 if u == "Cong" and p == "admin123": st.session_state.authenticated = True; st.rerun()
 
 elif selected == "Vận Hành":
     conn = sqlite3.connect(DB_NAME)
     df_m = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    tab_list, tab_add = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
+    tab_list, tab_add = st.tabs(["📊 DANH SÁCH LEAD (10 TRƯỜNG)", "➕ TIẾP NHẬN HỒ SƠ"])
     
     with tab_list:
-        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại...")
+        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại, bang...")
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
         for idx, row in filtered.iterrows():
             u_key = f"ld_{row['id']}"; c_cell = clean_phone(row['cell']); c_work = clean_phone(row.get('work',''))
@@ -120,12 +126,12 @@ elif selected == "Vận Hành":
                 <div class="client-card">
                     <div style="display: flex; justify-content: space-between;">
                         <div style="flex: 4.8;">
-                            <div style="font-size: 19px; font-weight: 700;">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none;">🆔 {row['crm_id']}</a></div>
+                            <div style="font-size: 19px; font-weight: 700;">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none; color:#0ea5e9;">🆔 {row['crm_id']}</a></div>
                             <div style="margin: 8px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b></div>
                             <div>
                                 <a href="tel:{c_cell}" class="action-link">📞 {c_cell}</a>
                                 <a href="rcmobile://call?number={c_cell}" class="action-link">RC Cell</a>
-                                <a href="rcmobile://call?number={c_work}" class="action-link">🏢 Work: {c_work}</a>
+                                <a href="rcmobile://call?number={c_work}" class="action-link">🏢 Work Call</a>
                                 <a href="rcmobile://sms?number={c_cell}" class="action-link">💬 SMS</a>
                                 <a href="mailto:{row['email']}" class="action-link">✉️ Email</a>
                                 <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting_{urllib.parse.quote(str(row['name']))}" target="_blank" class="action-link">📅 Calendar</a>
@@ -135,7 +141,7 @@ elif selected == "Vận Hành":
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
-                c_n, c_s = st.columns([8, 2])
+                c_n, c_s = st.columns([8.2, 1.8])
                 with c_n:
                     with st.form(key=f"nt_{u_key}", clear_on_submit=True):
                         ni = st.text_input("Ghi nhanh...", label_visibility="collapsed")
@@ -145,8 +151,8 @@ elif selected == "Vận Hành":
                             conn.execute("UPDATE leads SET note=?, last_updated=? WHERE id=?", (new_n, n_ny.isoformat(), row['id']))
                             conn.commit(); st.rerun()
                 with c_s:
-                    # Dùng Popover nguyên bản của Streamlit, không ẩn gì cả
-                    with st.popover("⚙️ SỬA HỒ SƠ", use_container_width=True):
+                    # Tuyệt đối không ẩn icon, dùng Popover nguyên bản để tránh lỗi bóng chữ
+                    with st.popover("⚙️ SỬA", use_container_width=True):
                         with st.form(f"f_ed_{u_key}"):
                             st.markdown("<div class='section-tag'>HỒ SƠ</div>", unsafe_allow_html=True)
                             un = st.text_input("Tên", row['name'])
@@ -165,7 +171,7 @@ elif selected == "Vận Hành":
                                 conn.commit(); st.rerun()
 
     with tab_add:
-        st.markdown("### ➕ THÊM HỒ SƠ MỚI (10 TRƯỜNG)")
+        st.markdown("### ➕ THÊM HỒ SƠ MỚI (ĐỦ 10 TRƯỜNG)")
         with st.form("add_new_f", clear_on_submit=True):
             r1 = st.columns(3); an = r1[0].text_input("Họ tên"); ai = r1[1].text_input("ID"); al = r1[2].text_input("Link")
             r2 = st.columns(3); ac = r2[0].text_input("Cell"); aw = r2[1].text_input("Work"); ae = r2[2].text_input("Email")
@@ -179,7 +185,7 @@ elif selected == "Vận Hành":
     conn.close()
 
 elif selected == "Cấu Hình":
-    st.markdown("<h2>⚙️ Cấu Hình</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>⚙️ CẤU HÌNH</h2>", unsafe_allow_html=True)
     with st.form("config"):
         new_sl = st.text_input("Slogan dòng IUL", value=prof.get('slogan'))
         up_l = st.file_uploader("Logo Sidebar", type=['png', 'jpg', 'jpeg'])
@@ -200,7 +206,7 @@ elif selected == "Cấu Hình":
             conn.commit(); conn.close(); st.success("Đã lưu!"); st.rerun()
 
 elif selected == "Mắt Thần":
-    st.markdown("<h2>👁️ Theo dõi Real-time</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>👁️ THEO DÕI REAL-TIME</h2>", unsafe_allow_html=True)
     conn = sqlite3.connect(DB_NAME)
     df_eye = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%KHÁCH ĐANG XEM%' ORDER BY last_updated DESC", conn)
     for _, row in df_eye.iterrows():
