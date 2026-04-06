@@ -67,7 +67,7 @@ def init_db():
                     tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', 
                     last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    # Tự động thêm cột nếu thiếu để tránh lỗi đỏ
+    # Tự động thêm cột nếu thiếu
     cols = [('crm_link','TEXT'), ('work','TEXT'), ('email','TEXT'), ('tags','TEXT'), ('last_updated','TEXT')]
     for col, ctype in cols:
         try: c.execute(f"ALTER TABLE leads ADD COLUMN {col} {ctype}")
@@ -106,12 +106,13 @@ if id_khach:
     conn.close(); st.stop()
 
 # --- 3. TẦNG QUẢN TRỊ ---
+if 'authenticated' not in st.session_state: st.session_state.authenticated = False
+
 with st.sidebar:
     logo_app = prof.get('logo_app')
     if logo_app and os.path.exists(logo_app): st.image(logo_app, use_container_width=True)
     else: st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
     st.divider()
-    if 'authenticated' not in st.session_state: st.session_state.authenticated = False
     if st.session_state.authenticated:
         from streamlit_option_menu import option_menu
         selected = option_menu(None, ["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"], styles={"nav-link-selected": {"background-color": "#00263e"}})
@@ -178,7 +179,7 @@ elif selected == "Vận Hành":
                 <div class="client-card">
                     <div style="display: flex; justify-content: space-between;">
                         <div style="flex: 5;">
-                            <div style="font-size: 20px; font-weight: 700;">{row['name']} | ID: {row['crm_id']}</div>
+                            <div style="font-size: 20px; font-weight: 700;">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none; color:#0ea5e9;">ID: {row['crm_id']}</a></div>
                             <div style="margin: 10px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b></div>
                             <div>
                                 <a href="tel:{c_cell}" class="action-link">📞 {c_cell}</a>
