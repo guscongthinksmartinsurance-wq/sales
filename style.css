@@ -1,0 +1,30 @@
+/* style.css */
+.stApp {
+    background-color: #0e1117;
+    color: #ffffff;
+}
+
+.tmc-gold {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.db-card {
+    background-color: #1e2130;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #ffd700;
+    text-align: center;
+}
+
+.history-entry {
+    border-left: 2px solid #ffd700;
+    padding-left: 10px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.note-time {
+    color: #888;
+    font-size: 0.8em;
+}
