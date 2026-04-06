@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 import pytz
+import io
 import os
 from streamlit_option_menu import option_menu
 
@@ -29,7 +30,7 @@ def init_db():
     # Bảng Profile
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT)''')
     
-    # Tự động thêm các cột lưu ảnh nếu chưa có (Tránh lỗi KeyError)
+    # Tự động thêm các cột lưu ảnh nếu chưa có
     cols = [('logo_app', 'TEXT'), ('img_national', 'TEXT'), ('img_iul', 'TEXT')]
     for col_name, col_type in cols:
         try: c.execute(f"ALTER TABLE profile ADD COLUMN {col_name} {col_type}")
@@ -45,7 +46,6 @@ init_db()
 
 def get_profile():
     conn = sqlite3.connect(DB_NAME)
-    # Chuyển về Dictionary để truy cập an toàn bằng .get()
     conn.row_factory = sqlite3.Row
     res = conn.execute("SELECT * FROM profile WHERE id=1").fetchone()
     conn.close()
@@ -55,7 +55,6 @@ def get_profile():
 prof = get_profile()
 
 with st.sidebar:
-    # Hiển thị Logo App từ Cấu hình
     logo_app = prof.get('logo_app')
     if logo_app and os.path.exists(logo_app):
         st.image(logo_app, use_container_width=True)
@@ -79,65 +78,63 @@ with st.sidebar:
     else:
         selected = "Trang Chủ"
 
-# --- 3. LOGIC TẦNG KHÁCH HÀNG ---
+# --- 3. LOGIC TẦNG KHÁCH HÀNG (ƯU TIÊN) ---
 query_params = st.query_params
 id_khach = query_params.get("id")
 
 if id_khach:
     conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM leads WHERE phone = ?", (id_khach,)).fetchone()
     if row:
-        # Ghi log mắt thần...
-        st.markdown(f"<h1 style='color:#00263e;'>🛡️ Chào {row[1]}</h1>", unsafe_allow_html=True)
+        # Ghi log mắt thần
+        t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
+        view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> <span style='color:#f57c00; font-weight:bold;'>🔥 KHÁCH ĐANG XEM</span></div>"
+        if "KHÁCH ĐANG XEM" not in str(row['note'])[:150]:
+            new_note = view_log + str(row['note'])
+            conn.execute("UPDATE leads SET note = ?, last_updated = ? WHERE phone = ?", 
+                         (new_note, datetime.now(NY_TZ).isoformat(), id_khach))
+            conn.commit()
+
+        st.markdown(f"<h1 style='color:#00263e;'>🛡️ Chào {row['name']}</h1>", unsafe_allow_html=True)
         img_i = prof.get('img_iul')
         if img_i and os.path.exists(img_i): st.image(img_i, use_container_width=True)
     conn.close()
     st.stop()
 
-# =========================================================
-# PHẦN 1: TRANG CHỦ (BỐ CỤC 2 BÊN CHỈNH CHU)
-# =========================================================
+# --- 4. CÁC HÀM HIỂN THỊ GIAO DIỆN ---
+
 def show_home_page():
-    prof = get_profile()
-    
-    # 1. Banner chính - Full Width
+    # Banner chính
     st.markdown('<div class="hero-banner"><h1>NATIONAL LIFE GROUP</h1><p>Experience the Peace of Mind Since 1848</p></div>', unsafe_allow_html=True)
     
-    # 2. Chia 2 cột chính - Sạch sẽ, không dùng cột đệm
     col_left, col_right = st.columns(2, gap="large")
 
-    # CỘT TRÁI: TẬP ĐOÀN
     with col_left:
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
         st.markdown('<p class="section-header">Tập Đoàn National Life Group</p>', unsafe_allow_html=True)
-        
         img_n = prof.get('img_national')
         if img_n and os.path.exists(img_n):
             st.image(img_n, use_container_width=True)
         else:
             st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
-            
-        st.write("National Life Group là biểu tượng của sự tin cậy tại Hoa Kỳ từ năm 1848. Chúng tôi mang đến các giải pháp bảo vệ tài chính bền vững qua nhiều thế kỷ.")
-        st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.\n- **Vững mạnh:** Top đầu ngành tài chính.")
+        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848, mang đến giải pháp bảo vệ tài chính bền vững.")
+        st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.\n- **Vững mạnh:** Top đầu tài chính.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # CỘT PHẢI: GIẢI PHÁP IUL
     with col_right:
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
         st.markdown('<p class="section-header">Giải Pháp Tài Chính IUL</p>', unsafe_allow_html=True)
-        
         img_i = prof.get('img_iul')
         if img_i and os.path.exists(img_i):
             st.image(img_i, use_container_width=True)
         else:
             st.info("Vào mục Cấu Hình để upload ảnh IUL.")
-            
-        st.write(f"**{prof.get('slogan', 'Sâu sắc - Tận tâm - Chuyên nghiệp')}**")
-        st.write("IUL là giải pháp tối ưu kết hợp bảo vệ sinh mạng và tích lũy hưu trí không thuế, bảo đảm an toàn vốn trước biến động thị trường.")
+        st.write(f"**{prof.get('slogan')}**")
+        st.write("IUL kết hợp bảo vệ sinh mạng và tích lũy hưu trí không thuế, an toàn vốn trước biến động thị trường.")
         st.markdown("- **An toàn:** Bảo đảm 0% sàn.\n- **Linh hoạt:** Rút tiền không thuế.\n- **Toàn diện:** Quyền lợi sống ưu việt.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3. Đăng nhập - Nằm ngoài các cột để không bị lệch bố cục
     if not st.session_state.authenticated:
         st.write("<br>", unsafe_allow_html=True)
         with st.expander("🔐 QUẢN TRỊ HỆ THỐNG"):
@@ -148,32 +145,31 @@ def show_home_page():
                     st.session_state.authenticated, st.session_state.role, st.session_state.username = True, "Admin", "Cong"
                     st.rerun()
 
-# =========================================================
-# CÁC PHẦN KHÁC (GIỮ NGUYÊN KHUNG)
-# =========================================================
+# --- 5. ĐIỀU HƯỚNG CHÍNH ---
+
+if selected == "Trang Chủ":
+    show_home_page()
+
+elif selected == "Mắt Thần":
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👁️ THEO DÕI REAL-TIME</h2></div>", unsafe_allow_html=True)
+    st.info("Phân hệ Mắt Thần đang sẵn sàng để anh chỉnh sửa tính năng.")
+
+elif selected == "Vận Hành":
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ QUẢN LÝ HỆ THỐNG</h2></div>", unsafe_allow_html=True)
+    st.info("Phân hệ Vận Hành đang sẵn sàng để anh chỉnh sửa tính năng.")
+
 elif selected == "Cấu Hình":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👤 CÀI ĐẶT HỆ THỐNG</h2></div>", unsafe_allow_html=True)
-    
     with st.form("config_form"):
         st.markdown("### 📝 Thay đổi Slogan")
         new_slogan = st.text_input("Slogan dòng IUL", value=prof.get('slogan'), label_visibility="collapsed")
-        
         st.write("---")
-        st.markdown("### 🖼️ Cập nhật Hình ảnh (Nhỏ gọn)")
+        st.markdown("### 🖼️ Cập nhật Hình ảnh")
+        c1, c2, c3 = st.columns(3)
+        with c1: up_logo = st.file_uploader("Logo Sidebar", type=["png", "jpg"], key="up_l")
+        with c2: up_nat = st.file_uploader("Ảnh National Life", type=["png", "jpg"], key="up_n")
+        with c3: up_iul = st.file_uploader("Ảnh dòng IUL", type=["png", "jpg"], key="up_i")
         
-        # Chia cột hẹp lại để 3 ô upload không bị kéo quá dài
-        col_space_1, col_l, col_n, col_i, col_space_2 = st.columns([0.5, 3, 3, 3, 0.5])
-        
-        with col_l:
-            up_logo = st.file_uploader("Logo App", type=["png", "jpg"], key="up_l")
-        
-        with col_n:
-            up_nat = st.file_uploader("Ảnh National Life", type=["png", "jpg"], key="up_n")
-            
-        with col_i:
-            up_iul = st.file_uploader("Ảnh dòng IUL", type=["png", "jpg"], key="up_i")
-        
-        st.write("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 LƯU TẤT CẢ THAY ĐỔI", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
             if up_logo:
@@ -189,9 +185,3 @@ elif selected == "Cấu Hình":
             conn.commit()
             conn.close()
             st.success("Đã lưu thành công!"); st.rerun()
-
-elif selected == "Mắt Thần":
-    st.write("Phần tính năng Mắt Thần đang đợi anh chỉnh sửa...")
-
-elif selected == "Vận Hành":
-    st.write("Phần tính năng Vận Hành đang đợi anh chỉnh sửa...")
