@@ -1,37 +1,44 @@
-/* style.css - ELITE BLUE & WHITE INTERFACE */
+/* style.css */
 .stApp {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); /* Nền xanh biển nhạt có gradient */
+    background-color: #f4f7f9;
 }
 
-/* Sidebar phong cách hiện đại */
-[data-testid="stSidebar"] {
-    background-color: #ffffff !important;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+/* Header Banner - Giống website National Life */
+.hero-section {
+    background-color: #00263e; /* Màu Navy đặc trưng của National Life */
+    padding: 60px 40px;
+    border-radius: 0 0 40px 40px;
+    color: white;
+    text-align: center;
+    margin-bottom: 40px;
 }
 
-/* Khối Card nội dung trắng tinh khôi, bo góc 20px */
-.main-card {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 30px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    border: 1px solid #ffffff;
-    margin-bottom: 25px;
-}
-
-/* Hiệu ứng cho các dòng Note Mắt Thần */
-.history-entry {
-    background: #f8fafd;
-    border-left: 5px solid #0056D2;
-    padding: 12px;
-    border-radius: 8px;
+.hero-title {
+    font-size: 42px;
+    font-weight: 700;
     margin-bottom: 10px;
-    font-size: 0.95em;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.02);
 }
 
-.tmc-title {
-    color: #1a202c;
-    font-weight: 800;
-    letter-spacing: -0.5px;
+.hero-subtitle {
+    font-size: 20px;
+    font-weight: 300;
+    opacity: 0.9;
+}
+
+/* Khối nội dung trắng sạch sẽ */
+.content-card {
+    background-color: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border: 1px solid #e1e8ed;
+}
+
+.section-title {
+    color: #00263e;
+    font-size: 28px;
+    font-weight: 700;
+    border-bottom: 3px solid #00a9e0; /* Màu xanh sáng làm điểm nhấn */
+    padding-bottom: 10px;
+    margin-bottom: 25px;
 }
