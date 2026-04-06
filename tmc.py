@@ -158,14 +158,28 @@ if selected == "Trang Chủ":
 # =========================================================
 elif selected == "Cấu Hình":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👤 CÀI ĐẶT HỆ THỐNG</h2></div>", unsafe_allow_html=True)
+    
     with st.form("config_form"):
-        new_slogan = st.text_input("Slogan dòng IUL", value=prof.get('slogan'))
-        c1, c2, c3 = st.columns(3)
-        up_logo = c1.file_uploader("Logo App (Sidebar)", type=["png", "jpg"])
-        up_nat = c2.file_uploader("Ảnh National Life (Cột trái)", type=["png", "jpg"])
-        up_iul = c3.file_uploader("Ảnh dòng IUL (Cột phải)", type=["png", "jpg"])
+        st.markdown("### 📝 Thay đổi Slogan")
+        new_slogan = st.text_input("Slogan dòng IUL", value=prof.get('slogan'), label_visibility="collapsed")
         
-        if st.form_submit_button("LƯU TẤT CẢ"):
+        st.write("---")
+        st.markdown("### 🖼️ Cập nhật Hình ảnh (Nhỏ gọn)")
+        
+        # Chia cột hẹp lại để 3 ô upload không bị kéo quá dài
+        col_space_1, col_l, col_n, col_i, col_space_2 = st.columns([0.5, 3, 3, 3, 0.5])
+        
+        with col_l:
+            up_logo = st.file_uploader("Logo App", type=["png", "jpg"], key="up_l")
+        
+        with col_n:
+            up_nat = st.file_uploader("Ảnh National Life", type=["png", "jpg"], key="up_n")
+            
+        with col_i:
+            up_iul = st.file_uploader("Ảnh dòng IUL", type=["png", "jpg"], key="up_i")
+        
+        st.write("<br>", unsafe_allow_html=True)
+        if st.form_submit_button("💾 LƯU TẤT CẢ THAY ĐỔI", use_container_width=True):
             conn = sqlite3.connect(DB_NAME)
             if up_logo:
                 with open("logo_app.png", "wb") as f: f.write(up_logo.getbuffer())
