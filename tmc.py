@@ -201,44 +201,51 @@ elif selected == "Cấu Hình":
 
 elif selected == "Mắt Thần":
     st.markdown("<h2 style='color:#0f172a;'>👁️ Hệ Thống Mắt Thần Real-time</h2>", unsafe_allow_html=True)
-    st.info("Theo dõi những khách hàng đang truy cập hệ thống và lịch sử tương tác mới nhất.")
     
     conn = sqlite3.connect(DB_NAME)
-    # Lấy những Lead có tương tác "KHÁCH ĐANG XEM" trong 24h qua hoặc có cập nhật mới nhất
+    # Chỉ lấy những Lead có hành vi "KHÁCH ĐANG XEM" và sắp xếp theo thời gian mới nhất
     query = """
         SELECT * FROM leads 
         WHERE note LIKE '%KHÁCH ĐANG XEM%' 
-        OR last_updated >= date('now', '-1 day')
-        ORDER BY last_updated DESC
+        ORDER BY last_updated DESC 
+        LIMIT 20
     """
     df_eye = pd.read_sql(query, conn)
     
     if df_eye.empty:
-        st.write("Hiện chưa có hoạt động mới nào từ khách hàng.")
+        st.info("Hiện chưa có khách hàng nào đang xem link hoặc có hoạt động mới.")
     else:
+        # Dashboard nhỏ báo số lượng khách đang xem trong phiên
+        st.metric("Khách hàng đang biến động", len(df_eye))
+        
         for _, row in df_eye.iterrows():
             with st.container():
-                # Tạo giao diện Timeline bằng CSS nhẹ
+                # Thiết kế Card dạng "Cảnh báo" đặc biệt cho Mắt Thần
                 st.markdown(f"""
-                <div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ef4444; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between;">
                         <div style="font-size: 18px; font-weight: 700; color: #1e293b;">
-                            👤 {row['name']} <span style="font-size: 13px; font-weight: 400; color: #64748b; margin-left: 10px;">({row['cell']})</span>
+                            👤 {row['name']} | <span style="color: #0369a1;">{row['cell']}</span>
                         </div>
-                        <div style="background: #fee2e2; color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">
-                            ĐANG TRUY CẬP
+                        <div style="background: #fee2e2; color: #ef4444; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; animation: blinker 1.5s linear infinite;">
+                            🔥 ĐANG XEM
                         </div>
                     </div>
-                    <div style="margin-top: 10px; color: #475569; font-size: 14px;">
-                        📍 Bang: <b>{row['state']}</b> | 👤 Quản lý: <b>{row['owner']}</b>
+                    <div style="margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 5px;">HÀNH VI HỆ THỐNG GHI NHẬN:</div>
+                        <div style="font-size: 14px; line-height: 1.6;">{row['note']}</div>
                     </div>
-                    <div style="margin-top: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                        <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 5px;">HÀNH VI MỚI NHẤT</div>
-                        <div style="line-height: 1.6;">{row['note']}</div>
+                    <div style="margin-top: 12px; display: flex; gap: 15px;">
+                        <span style="font-size: 13px; color: #64748b;">📍 Bang: <b>{row['state']}</b></span>
+                        <span style="font-size: 13px; color: #64748b;">👤 Owner: <b>{row['owner']}</b></span>
                     </div>
                     <div style="margin-top: 10px; text-align: right;">
-                        <a href="tel:{row['cell']}" style="text-decoration: none; color: #0369a1; font-size: 13px; font-weight: 600;">📞 Gọi ngay cho khách</a>
+                        <a href="tel:{row['cell']}" style="text-decoration: none; color: white; background: #0369a1; padding: 5px 15px; border-radius: 6px; font-size: 13px;">📞 Gọi Ngay</a>
                     </div>
                 </div>
+                
+                <style>
+                @keyframes blinker { 50% { opacity: 0; } }
+                </style>
                 """, unsafe_allow_html=True)
     conn.close()
