@@ -12,7 +12,7 @@ st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
 
-# Load giao diện
+# Load CSS
 try:
     with open("style.css") as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
@@ -27,14 +27,27 @@ def init_db():
                     name TEXT, phone TEXT UNIQUE, state TEXT,
                     status TEXT DEFAULT 'New', owner TEXT,
                     note TEXT DEFAULT '', last_updated TIMESTAMP)''')
-    # Bảng Profile (Thêm các cột lưu ảnh anh tự upload)
-    c.execute('''CREATE TABLE IF NOT EXISTS profile (
-                    id INTEGER PRIMARY KEY, slogan TEXT, 
-                    logo_app TEXT, img_national TEXT, img_iul TEXT)''')
     
+    # Bảng Profile
+    c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT)''')
+    
+    # KIỂM TRA VÀ TỰ ĐỘNG THÊM CỘT NẾU THIẾU (Sửa lỗi KeyError)
+    columns_to_add = [
+        ('logo_app', 'TEXT'),
+        ('img_national', 'TEXT'),
+        ('img_iul', 'TEXT')
+    ]
+    
+    for col_name, col_type in columns_to_add:
+        try:
+            c.execute(f"ALTER TABLE profile ADD COLUMN {col_name} {col_type}")
+        except:
+            pass # Cột đã tồn tại
+            
     c.execute("SELECT count(*) FROM profile")
     if c.fetchone()[0] == 0:
         c.execute("INSERT INTO profile (id, slogan) VALUES (1, 'Mang lại sự bình yên và thịnh vượng cho mọi gia đình')")
+    
     conn.commit()
     conn.close()
 
@@ -48,10 +61,12 @@ def get_profile():
 
 # --- 2. SIDEBAR & ĐIỀU HƯỚNG ---
 prof = get_profile()
+
 with st.sidebar:
-    # Ưu tiên hiện Logo App anh upload
-    if prof['logo_app'] and os.path.exists(prof['logo_app']):
-        st.image(prof['logo_app'], use_container_width=True)
+    # Kiểm tra cột logo_app (Dùng get để tránh lỗi nếu fetch fail)
+    logo_path = prof.get('logo_app')
+    if logo_path and os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
     else:
         st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
     
@@ -65,7 +80,7 @@ with st.sidebar:
             menu_title=None,
             options=["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"],
             icons=["house", "eye", "gear", "person-badge"],
-            styles={"nav-link-selected": {"background-color": "#0056D2"}}
+            styles={"nav-link-selected": {"background-color": "#00263e"}}
         )
         if st.button("🚪 Đăng xuất", use_container_width=True):
             st.session_state.authenticated = False
@@ -74,20 +89,29 @@ with st.sidebar:
         selected = "Trang Chủ"
         st.info("🔓 Đăng nhập để quản lý")
 
-# --- 3. LOGIC TẦNG KHÁCH HÀNG (ID TRÊN URL) ---
+# --- 3. ĐIỀU HƯỚNG TẦNG ---
 query_params = st.query_params
 id_khach = query_params.get("id")
 
 if id_khach:
+    # TẦNG KHÁCH HÀNG
     conn = sqlite3.connect(DB_NAME)
     df_k = pd.read_sql(f"SELECT * FROM leads WHERE phone = '{id_khach}'", conn)
     if not df_k.empty:
         row = df_k.iloc[0]
-        # Xử lý ghi Mắt thần vào note... (logic giữ nguyên)
-        st.markdown(f"<h1 style='color:#0056D2;'>🛡️ Chào {row['name']}</h1>", unsafe_allow_html=True)
-        if prof['img_iul'] and os.path.exists(prof['img_iul']):
-            st.image(prof['img_iul'], use_container_width=True)
-        st.info("Giải pháp tài chính cá nhân hóa của bạn.")
+        # Logic ghi mắt thần... (đã tối ưu)
+        t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
+        view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> <span style='color:#f57c00; font-weight:bold;'>🔥 KHÁCH VỪA XEM LINK</span></div>"
+        if "KHÁCH VỪA XEM LINK" not in str(row['note'])[:150]:
+            new_note = view_log + str(row['note'])
+            conn.execute("UPDATE leads SET note = ?, last_updated = ? WHERE phone = ?", (new_note, datetime.now(NY_TZ).isoformat(), id_khach))
+            conn.commit()
+
+        st.markdown(f"<h1 style='color:#00263e;'>🛡️ Chào {row['name']}</h1>", unsafe_allow_html=True)
+        img_i = prof.get('img_iul')
+        if img_i and os.path.exists(img_i):
+            st.image(img_i, use_container_width=True)
+        st.info("Kế hoạch tài chính cá nhân hóa của bạn từ National Life Group.")
     conn.close()
     st.stop()
 
@@ -100,14 +124,12 @@ if selected == "Trang Chủ":
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
         st.markdown('<p class="section-header">Giải Pháp IUL Cho Gia Đình Việt</p>', unsafe_allow_html=True)
         st.write(f"**{prof['slogan']}**")
-        st.write("""
-        Sản phẩm Indexed Universal Life (IUL) của National Life Group không chỉ bảo vệ tài chính 
-        mà còn là công cụ tích lũy an toàn, rút tiền không thuế cho hưu trí và tương lai.
-        """)
-        st.markdown("- Bảo vệ trọn đời trước biến cố.\n- Tích lũy lãi kép dựa trên thị trường chứng khoán.\n- Bảo đảm 0% sàn, không lo lỗ vốn.\n- Quyền lợi sống vượt trội.")
+        st.write("Sản phẩm Indexed Universal Life (IUL) của National Life Group mang lại sự bảo vệ và tích lũy an toàn.")
+        st.markdown("- Bảo vệ tài chính trọn đời.\n- Tích lũy lãi kép dựa trên thị trường.\n- Đảm bảo 0% sàn.\n- Quyền lợi sống ưu việt.")
         
-        if prof['img_iul'] and os.path.exists(prof['img_iul']):
-            st.image(prof['img_iul'], use_container_width=True, caption="Minh họa giải pháp IUL")
+        img_i = prof.get('img_iul')
+        if img_i and os.path.exists(img_i):
+            st.image(img_i, use_container_width=True)
             
         if not st.session_state.authenticated:
             st.divider()
@@ -121,21 +143,47 @@ if selected == "Trang Chủ":
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_img:
-        if prof['img_national'] and os.path.exists(prof['img_national']):
-            st.image(prof['img_national'], use_container_width=True)
+        img_n = prof.get('img_national')
+        if img_n and os.path.exists(img_n):
+            st.image(img_n, use_container_width=True)
         else:
             st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
 
 elif selected == "Mắt Thần":
-    st.markdown("<div class='main-card'><h2 class='tmc-title'>👁️ THEO DÕI KHÁCH HÀNG</h2></div>", unsafe_allow_html=True)
-    # Thêm logic hiển thị khách đang online tại đây...
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👁️ THEO DÕI KHÁCH HÀNG</h2></div>", unsafe_allow_html=True)
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql("SELECT * FROM leads", conn)
+    viewing = df[df['note'].str.contains("KHÁCH VỪA XEM LINK", na=False)]
+    if not viewing.empty:
+        for _, r in viewing.iterrows():
+            with st.container(border=True):
+                st.write(f"🔥 **{r['name']}** ({r['phone']}) - Sale: {r['owner']}")
+                st.caption(f"Lịch sử: {r['note'][:150]}...")
+    else:
+        st.info("Hiện chưa có khách nào đang truy cập link.")
+    conn.close()
 
 elif selected == "Vận Hành":
-    st.markdown("<div class='main-card'><h2 class='tmc-title'>⚙️ VẬN HÀNH DỮ LIỆU</h2></div>", unsafe_allow_html=True)
-    # Thêm logic Thêm/Sửa/Xóa Lead tại đây...
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ VẬN HÀNH DỮ LIỆU</h2></div>", unsafe_allow_html=True)
+    conn = sqlite3.connect(DB_NAME)
+    # Phần thêm lead và bảng quản lý như cũ
+    tab1, tab2 = st.tabs(["➕ Thêm Lead", "📊 Quản lý"])
+    with tab1:
+        with st.form("add"):
+            n, p, o = st.text_input("Tên"), st.text_input("Phone"), st.selectbox("Sale", ["Cong", "Sale1"])
+            if st.form_submit_button("Lưu"):
+                try:
+                    conn.execute("INSERT INTO leads (name, phone, owner) VALUES (?,?,?)", (n,p,o))
+                    conn.commit()
+                    st.success("Đã thêm thành công!"); st.rerun()
+                except: st.error("Lỗi: Số điện thoại đã tồn tại.")
+    with tab2:
+        df_all = pd.read_sql("SELECT * FROM leads", conn)
+        st.dataframe(df_all, use_container_width=True)
+    conn.close()
 
 elif selected == "Cấu Hình":
-    st.markdown("<div class='main-card'><h2 class='tmc-title'>👤 CÀI ĐẶT GIAO DIỆN</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👤 CÀI ĐẶT GIAO DIỆN</h2></div>", unsafe_allow_html=True)
     with st.form("config_form"):
         new_slogan = st.text_input("Slogan Trang Chủ", value=prof['slogan'])
         c1, c2, c3 = st.columns(3)
