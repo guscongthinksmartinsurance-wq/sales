@@ -3,3 +3,4 @@ pandas
 pytz
 plotly
 xlsxwriter
+streamlit-option-menu
