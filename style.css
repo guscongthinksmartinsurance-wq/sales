@@ -1,44 +1,49 @@
 /* style.css */
 .stApp {
-    background-color: #f4f7f9;
+    background-color: #ffffff;
 }
 
-/* Header Banner - Giống website National Life */
-.hero-section {
-    background-color: #00263e; /* Màu Navy đặc trưng của National Life */
-    padding: 60px 40px;
-    border-radius: 0 0 40px 40px;
+/* Biến trang web thành các mảng màu rộng (Full width) */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 0rem !important;
+    max-width: 100% !important;
+}
+
+/* Banner chính - Màu xanh Navy National Life */
+.hero-banner {
+    background-color: #00263e;
     color: white;
-    text-align: center;
+    padding: 80px 10%;
+    text-align: left;
     margin-bottom: 40px;
+    border-left: 10px solid #00a9e0; /* Điểm nhấn xanh sáng */
 }
 
-.hero-title {
-    font-size: 42px;
-    font-weight: 700;
-    margin-bottom: 10px;
+.hero-banner h1 {
+    font-size: 50px;
+    font-weight: 800;
+    margin: 0;
 }
 
-.hero-subtitle {
-    font-size: 20px;
-    font-weight: 300;
-    opacity: 0.9;
+.hero-banner p {
+    font-size: 22px;
+    opacity: 0.8;
 }
 
-/* Khối nội dung trắng sạch sẽ */
-.content-card {
-    background-color: white;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    border: 1px solid #e1e8ed;
+/* Khối nội dung trắng chuyên nghiệp */
+.info-section {
+    padding: 20px 10%;
 }
 
-.section-title {
+.section-header {
     color: #00263e;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
-    border-bottom: 3px solid #00a9e0; /* Màu xanh sáng làm điểm nhấn */
-    padding-bottom: 10px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
+
+/* Ẩn các thành phần thừa của Streamlit */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
