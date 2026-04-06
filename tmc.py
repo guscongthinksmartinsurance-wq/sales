@@ -3,10 +3,11 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 import pytz
-import base64
+import os  # <-- THIẾU CÁI NÀY NÊN MỚI BÁO LỖI ĐÓ ANH
 import urllib.parse
+import base64
 
-# --- 1. CẤU HÌNH & CSS SẠCH ---
+# --- 1. CẤU HÌNH HỆ THỐNG & CSS ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
@@ -32,9 +33,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, crm_id TEXT, crm_link TEXT, cell TEXT, work TEXT, email TEXT, state TEXT, owner TEXT, tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', last_updated TIMESTAMP, pdf_file BLOB)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    for col in [('pdf_file','BLOB'), ('work','TEXT'), ('email','TEXT'), ('tags','TEXT')]:
-        try: c.execute(f"ALTER TABLE leads ADD COLUMN {col[0]} {col[1]}")
-        except: pass
     conn.commit(); conn.close()
 
 init_db()
@@ -47,7 +45,7 @@ def get_profile():
 
 prof = get_profile()
 
-# --- 2. TẦNG KHÁCH HÀNG: HIỂN THỊ PDF ---
+# --- 2. TẦNG KHÁCH HÀNG: SOI PDF ---
 id_khach = st.query_params.get("id")
 if id_khach:
     conn = sqlite3.connect(DB_NAME); conn.row_factory = sqlite3.Row
@@ -67,8 +65,13 @@ if id_khach:
 # --- 3. QUẢN TRỊ ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 with st.sidebar:
-    logo = prof.get('logo_app')
-    st.image(logo if logo and os.path.exists(logo) else "https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+    logo_path = prof.get('logo_app')
+    # Kiểm tra os.path.exists an toàn vì đã import os ở dòng 5
+    if logo_path and os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
+    else:
+        st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+    
     if st.session_state.authenticated:
         from streamlit_option_menu import option_menu
         selected = option_menu(None, ["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"], styles={"nav-link-selected": {"background-color": "#00263e"}})
@@ -104,7 +107,8 @@ elif selected == "Vận Hành":
                             <div style="font-size: 20px; font-weight: 700;">{row['name']} | ID: {row['crm_id']}</div>
                             <div style="margin: 8px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b></div>
                             <div>
-                                <a href="tel:{row['cell']}" class="action-link">📞 Call</a>
+                                <a href="tel:{row['cell']}" class="action-link">📞 Call Cell</a>
+                                <a href="mailto:{row['email']}" class="action-link">✉️ Email</a>
                                 <a href="https://tmc-elite.streamlit.app/?id={row['cell']}" target="_blank" class="action-link" style="background:#10b981; color:white;">🔗 Link Gửi Khách</a>
                             </div>
                         </div>
