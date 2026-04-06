@@ -203,7 +203,7 @@ elif selected == "Mắt Thần":
     st.markdown("<h2 style='color:#0f172a;'>👁️ Hệ Thống Mắt Thần Real-time</h2>", unsafe_allow_html=True)
     
     conn = sqlite3.connect(DB_NAME)
-    # Chỉ lấy những Lead có hành vi "KHÁCH ĐANG XEM" và sắp xếp theo thời gian mới nhất
+    # Chỉ lọc những khách có hành vi mới hoặc đang xem link
     query = """
         SELECT * FROM leads 
         WHERE note LIKE '%KHÁCH ĐANG XEM%' 
@@ -213,14 +213,13 @@ elif selected == "Mắt Thần":
     df_eye = pd.read_sql(query, conn)
     
     if df_eye.empty:
-        st.info("Hiện chưa có khách hàng nào đang xem link hoặc có hoạt động mới.")
+        st.info("Hiện chưa có hoạt động mới nào từ khách hàng.")
     else:
-        # Dashboard nhỏ báo số lượng khách đang xem trong phiên
-        st.metric("Khách hàng đang biến động", len(df_eye))
+        st.metric("Khách hàng đang hoạt động", len(df_eye))
         
         for _, row in df_eye.iterrows():
             with st.container():
-                # Thiết kế Card dạng "Cảnh báo" đặc biệt cho Mắt Thần
+                # Fix lỗi f-string bằng cách nhân đôi dấu ngoặc nhọn {{ }}
                 st.markdown(f"""
                 <div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ef4444; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between;">
@@ -240,12 +239,12 @@ elif selected == "Mắt Thần":
                         <span style="font-size: 13px; color: #64748b;">👤 Owner: <b>{row['owner']}</b></span>
                     </div>
                     <div style="margin-top: 10px; text-align: right;">
-                        <a href="tel:{row['cell']}" style="text-decoration: none; color: white; background: #0369a1; padding: 5px 15px; border-radius: 6px; font-size: 13px;">📞 Gọi Ngay</a>
+                        <a href="tel:{row['cell']}" style="text-decoration: none; color: white; background: #0369a1; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 700;">📞 GỌI NGAY</a>
                     </div>
                 </div>
                 
                 <style>
-                @keyframes blinker { 50% { opacity: 0; } }
+                @keyframes blinker {{ 50% {{ opacity: 0; }} }}
                 </style>
                 """, unsafe_allow_html=True)
     conn.close()
