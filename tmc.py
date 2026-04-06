@@ -6,38 +6,50 @@ import pytz
 import os
 import urllib.parse
 
-# --- 1. CẤU HÌNH HỆ THỐNG & CSS ---
+# --- 1. CẤU HÌNH HỆ THỐNG & CSS NÂNG CAO ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
 
-# CSS Elite: Fix lỗi đè chữ Popover và chia cột thoáng
+# CSS ĐẶC TRỊ: SANG TRỌNG - THỰC CHIẾN - FIX LỖI POPOVER
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #f8fafc; }
+    
+    /* Card khách hàng Glassmorphism */
     .client-card {
         background: white; padding: 25px; border-radius: 16px;
         border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         margin-bottom: 15px;
     }
+    
+    /* ẨN MŨI TÊN POPOVER ĐỂ KHÔNG ĐÈ CHỮ SỬA */
     button[data-testid="stPopoverTarget"] svg { display: none !important; }
     button[data-testid="stPopoverTarget"] p { font-weight: 700 !important; font-size: 13px !important; }
+
+    /* Nút bấm thực chiến */
     .action-link {
         color: #0369a1; text-decoration: none; font-weight: 600;
         padding: 8px 15px; border-radius: 8px; background: #f1f5f9;
         font-size: 13px; display: inline-block; margin-right: 5px; margin-bottom: 8px;
     }
     .action-link:hover { background: #0ea5e9; color: white; }
+    
+    /* Dashboard Chỉ số */
+    .db-card {
+        background: white; padding: 20px; border-radius: 12px;
+        border-top: 4px solid #00263e; text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .db-num { font-size: 32px; font-weight: 800; color: #1e293b; }
+
+    /* Box lịch sử tương tác */
     .history-box {
         background: #fdfdfd; border-radius: 8px; padding: 12px;
         border-left: 3px solid #cbd5e1; height: 165px;
         overflow-y: auto; font-size: 14px; line-height: 1.6;
-    }
-    .section-tag {
-        background: #f1f5f9; padding: 4px 10px; border-radius: 4px;
-        font-size: 11px; font-weight: 800; color: #475569; margin: 10px 0 5px 0;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -55,8 +67,11 @@ def init_db():
                     tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', 
                     last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    # Fix ẩn khách
-    c.execute("UPDATE leads SET last_updated = ? WHERE last_updated IS NULL OR last_updated = ''", (datetime.now(NY_TZ).isoformat(),))
+    # Tự động thêm cột nếu thiếu để tránh lỗi đỏ
+    cols = [('crm_link','TEXT'), ('work','TEXT'), ('email','TEXT'), ('tags','TEXT'), ('last_updated','TEXT')]
+    for col, ctype in cols:
+        try: c.execute(f"ALTER TABLE leads ADD COLUMN {col} {ctype}")
+        except: pass
     conn.commit(); conn.close()
 
 init_db()
@@ -79,8 +94,8 @@ if id_khach:
     conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM leads WHERE cell = ?", (id_khach,)).fetchone()
     if row:
-        t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
-        view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> 🔥 KHÁCH ĐANG XEM</div>"
+        t_now_str = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
+        view_log = f"<div class='history-entry'><span class='note-time'>{t_now_str}</span> 🔥 KHÁCH ĐANG XEM</div>"
         if "KHÁCH ĐANG XEM" not in str(row['note'])[:150]:
             new_note = view_log + str(row['note'])
             conn.execute("UPDATE leads SET note=?, last_updated=? WHERE cell=?", (new_note, datetime.now(NY_TZ).isoformat(), id_khach))
@@ -117,7 +132,7 @@ if selected == "Trang Chủ":
     if not st.session_state.authenticated:
         with st.expander("🔐 QUẢN TRỊ"):
             u = st.text_input("User", key="u_h"); p = st.text_input("Pass", type="password", key="p_h")
-            if st.button("VÀO"):
+            if st.button("XÁC NHẬN"):
                 if u == "Cong" and p == "admin123": st.session_state.authenticated = True; st.rerun()
 
 elif selected == "Mắt Thần":
@@ -144,7 +159,6 @@ elif selected == "Vận Hành":
 
     tab_list, tab_add = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
     with tab_list:
-        # Dashboard
         m1, m2, m3, m4 = st.columns(4)
         m1.markdown(f"<div class='db-card'><p>TỔNG LEAD</p><h3>{len(df_m)}</h3></div>", unsafe_allow_html=True)
         m2.markdown(f"<div class='db-card' style='border-top-color:green;'><p>MỚI</p><h3>{len(df_m[df_m['status'] == 'New'])}</h3></div>", unsafe_allow_html=True)
@@ -216,6 +230,7 @@ elif selected == "Vận Hành":
     conn.close()
 
 elif selected == "Cấu Hình":
+    st.markdown("<h2>⚙️ Cấu Hình</h2>", unsafe_allow_html=True)
     with st.form("config"):
         new_sl = st.text_input("Slogan", value=prof.get('slogan'))
         c1, c2, c3 = st.columns(3); up_l = c1.file_uploader("Logo"); up_n = c2.file_uploader("Ảnh Nat"); up_i = c3.file_uploader("Ảnh IUL")
@@ -231,4 +246,4 @@ elif selected == "Cấu Hình":
                 with open("img_iul.jpg", "wb") as f: f.write(up_i.getbuffer())
                 conn.execute("UPDATE profile SET img_iul='img_iul.jpg'")
             conn.execute("UPDATE profile SET slogan=?", (new_sl,))
-            conn.commit(); conn.close(); st.rerun()
+            conn.commit(); conn.close(); st.success("Đã lưu!"); st.rerun()
