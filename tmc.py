@@ -175,56 +175,110 @@ elif selected == "Mắt Thần":
     conn.close()
 
 elif selected == "Vận Hành":
-    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ QUẢN LÝ HỆ THỐNG</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ HỆ THỐNG VẬN HÀNH DỮ LIỆU</h2></div>", unsafe_allow_html=True)
     conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
     
-    t1, t2 = st.tabs(["📊 Danh sách khách", "➕ Thêm mới"])
-    
-    with t1:
-        df_all = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-        for idx, row in df_all.iterrows():
-            with st.expander(f"👤 {row['name']} - {row['cell']} ({row['status']})"):
-                with st.form(f"edit_{row['id']}"):
-                    col1, col2, col3 = st.columns(3)
-                    un = col1.text_input("Tên", row['name'])
-                    ui = col2.text_input("ID", row['crm_id'] if row['crm_id'] else '')
-                    ul = col3.text_input("Link", row['crm_link'] if row['crm_link'] else '')
+    # Lấy dữ liệu từ DB
+    df_m = pd.read_sql("SELECT * FROM leads", conn)
+    n_ny = datetime.now(NY_TZ)
+
+    tab_list, tab_add = st.tabs(["📊 Danh sách Lead", "➕ Thêm mới"])
+
+    with tab_list:
+        # --- 1. DASHBOARD CHỈ SỐ ---
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000;'>TỔNG LEAD</p><div class='db-num-capsule'>{len(df_m)}</div></div>", unsafe_allow_html=True)
+        with m2: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:green;'>MỚI</p><div class='db-num-capsule'>{len(df_m[df_m['status'] == 'New'])}</div></div>", unsafe_allow_html=True)
+        with m3:
+            def is_late(r):
+                try: 
+                    last_i = r.get('last_updated')
+                    if not last_i: return False
+                    dt = datetime.fromisoformat(last_i)
+                    if dt.tzinfo is None: dt = NY_TZ.localize(dt)
+                    return (n_ny - dt).days > 7
+                except: return False
+            late_count = len(df_m[df_m.apply(is_late, axis=1)])
+            st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:red;'>TRỄ (>7D)</p><div class='db-num-capsule' style='color:red;'>{late_count}</div></div>", unsafe_allow_html=True)
+        with m4: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:blue;'>CHỐT</p><div class='db-num-capsule' style='color:blue;'>{len(df_m[df_m['status'] == 'Closed'])}</div></div>", unsafe_allow_html=True)
+
+        st.divider()
+
+        # --- 2. BỘ LỌC TÌM KIẾM ---
+        c_sch, c_sld = st.columns([7, 3])
+        q_s = c_sch.text_input("🔍 Tìm kiếm lead...", key="q_s_leader_final").lower().strip()
+        days_limit = c_sld.slider("⏳ Lọc khách trễ (ngày)", 0, 90, 90, key="sld_leader_final") 
+
+        # Filter dữ liệu
+        filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
+
+        # --- 3. DANH SÁCH CARD KHÁCH HÀNG ---
+        for idx, row in filtered.iterrows():
+            u_key = f"ld_{row['id']}"
+            c_cell = clean_phone(row['cell'])
+            c_work = clean_phone(row.get('work', ''))
+            
+            with st.container(border=True):
+                ci, cn, ce = st.columns([4.5, 5, 0.5])
+                
+                # Cột 1: Thông tin & Actions
+                with ci:
+                    st.markdown(f"<span class='client-title'>{row['name']}</span> | <a href='{row.get('crm_link','#')}' target='_blank'>🆔 {row.get('crm_id','N/A')}</a>", unsafe_allow_html=True)
+                    st.markdown(f"📍 {row.get('state','')} | 👤 {row['owner']} | 🏷️ **{row['status']}** | 🏷️ *{row.get('tags', '')}*")
+                    st.markdown(f"📱 <a href='tel:{c_cell}'>{c_cell}</a> | 🏢 <a href='tel:{c_work}'>{c_work}</a>", unsafe_allow_html=True)
                     
-                    col4, col5, col6 = st.columns(3)
-                    uc = col4.text_input("Cell", row['cell'])
-                    uw = col5.text_input("Work", row['work'] if row['work'] else '')
-                    ue = col6.text_input("Email", row['email'] if row['email'] else '')
-                    
-                    col7, col8, col9 = st.columns(3)
-                    us = col7.text_input("State", row['state'] if row['state'] else '')
-                    uo = col8.text_input("Owner", row['owner'] if row['owner'] else '')
-                    utg = col9.text_input("Tags", row['tags'] if row['tags'] else '')
-                    
-                    st_list = ["New", "Contacted", "Following", "Closed"]
-                    ust = st.selectbox("Status", st_list, index=st_list.index(row['status']) if row['status'] in st_list else 0)
-                    
-                    if st.form_submit_button("CẬP NHẬT"):
-                        conn.execute("""UPDATE leads SET 
-                            name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=?, status=?, last_updated=?
-                            WHERE id=?""", (un, ui, ul, uc, uw, ue, us, uo, utg, ust, datetime.now(NY_TZ).isoformat(), row['id']))
-                        conn.commit()
-                        st.success("Đã cập nhật dữ liệu!"); st.rerun()
-                        
-    with t2:
-        with st.form("add_new"):
-            st.write("### Nhập khách hàng mới")
-            n = st.text_input("Họ tên")
-            p = st.text_input("Số điện thoại (Cell)")
-            o = st.text_input("Owner", value="Cong")
-            if st.form_submit_button("LƯU HỒ SƠ"):
-                if n and p:
-                    try:
-                        conn.execute("INSERT INTO leads (name, cell, owner, last_updated) VALUES (?,?,?,?)",
-                                     (n, p, o, datetime.now(NY_TZ).isoformat()))
-                        conn.commit()
-                        st.success("Đã thêm khách hàng mới!"); st.rerun()
-                    except: st.error("Số điện thoại đã tồn tại!")
+                    # Nút bấm nhanh SMS, Email...
+                    a1, a2, a3 = st.columns([1,1,8])
+                    a1.markdown(f"<a href='rcmobile://sms?number={c_cell}' style='text-decoration:none; font-size:20px;'>💬</a>", unsafe_allow_html=True)
+                    a2.markdown(f"<a href='mailto:{row.get('email','')}' style='text-decoration:none; font-size:20px;'>✉️</a>", unsafe_allow_html=True)
+
+                # Cột 2: Lịch sử & Ghi chú
+                with cn:
+                    st.markdown(f'<div class="history-container">{row["note"]}</div>', unsafe_allow_html=True)
+                    c_n1, c_n2 = st.columns([8, 2])
+                    with c_n1:
+                        with st.form(key=f"f_nt_{u_key}", clear_on_submit=True):
+                            ni = st.text_input("Ghi nhanh...", label_visibility="collapsed", key=f"in_{u_key}")
+                            if st.form_submit_button("Lưu"):
+                                t_str = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
+                                new_entry = f"<div class='history-entry'><span class='note-time'>{t_str}</span> {ni}</div>"
+                                updated_note = new_entry + str(row['note'])
+                                conn.execute("UPDATE leads SET note=?, last_updated=? WHERE id=?", 
+                                             (updated_note, datetime.now(NY_TZ).isoformat(), row['id']))
+                                conn.commit()
+                                st.rerun()
+                    with c_n2:
+                        with st.popover("📝"):
+                            en = st.text_area("Sửa History", value=format_note_for_edit(row['note']), height=250, key=f"area_{u_key}")
+                            if st.button("Lưu lại", key=f"ed_note_{u_key}"):
+                                fmt = "".join([f"<div class='history-entry'>{line.strip()}</div>" for line in en.split('\n') if line.strip()])
+                                conn.execute("UPDATE leads SET note=? WHERE id=?", (fmt, row['id']))
+                                conn.commit()
+                                st.rerun()
+
+                # Cột 3: Cài đặt (Sửa chi tiết)
+                with ce:
+                    with st.popover("⚙️"):
+                        with st.form(f"f_ed_{u_key}"):
+                            un = st.text_input("Tên", row['name'])
+                            ui = st.text_input("ID", row.get('crm_id', ''))
+                            ul = st.text_input("Link", row.get('crm_link', ''))
+                            uc = st.text_input("Cell", row['cell'])
+                            uw = st.text_input("Work", row.get('work', ''))
+                            ue = st.text_input("Email", row.get('email', ''))
+                            us = st.text_input("State", row.get('state', ''))
+                            uo = st.text_input("Owner", row.get('owner', ''))
+                            utg = st.text_input("Tags", row.get('tags', ''))
+                            st_list = ["New", "Contacted", "Following", "Closed"]
+                            ust = st.selectbox("Status", st_list, index=st_list.index(row['status']) if row['status'] in st_list else 0)
+                            
+                            if st.form_submit_button("CẬP NHẬT"):
+                                conn.execute("""UPDATE leads SET 
+                                    name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=?, status=?, last_updated=?
+                                    WHERE id=?""", (un, ui, ul, uc, uw, ue, us, uo, utg, ust, datetime.now(NY_TZ).isoformat(), row['id']))
+                                conn.commit()
+                                st.success("Đã cập nhật!")
+                                st.rerun()
     conn.close()
 
 elif selected == "Cấu Hình":
