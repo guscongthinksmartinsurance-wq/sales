@@ -97,14 +97,16 @@ if id_khach:
 # =========================================================
 # PHẦN 1: TRANG CHỦ (BỐ CỤC 2 BÊN CHỈNH CHU)
 # =========================================================
-if selected == "Trang Chủ":
-    # Banner rộng toàn màn hình
+def show_home_page():
+    prof = get_profile()
+    
+    # 1. Banner chính - Full Width
     st.markdown('<div class="hero-banner"><h1>NATIONAL LIFE GROUP</h1><p>Experience the Peace of Mind Since 1848</p></div>', unsafe_allow_html=True)
     
-    # Chia 2 cột chính
+    # 2. Chia 2 cột chính - Sạch sẽ, không dùng cột đệm
     col_left, col_right = st.columns(2, gap="large")
 
-    # BÊN TRÁI: NHÀ SẢN XUẤT (NATIONAL LIFE GROUP)
+    # CỘT TRÁI: TẬP ĐOÀN
     with col_left:
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
         st.markdown('<p class="section-header">Tập Đoàn National Life Group</p>', unsafe_allow_html=True)
@@ -115,15 +117,11 @@ if selected == "Trang Chủ":
         else:
             st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
             
-        st.write("""
-        Được thành lập từ năm 1848, National Life Group là một trong những tập đoàn tài chính 
-        lâu đời và uy tín nhất Hoa Kỳ. Chúng tôi cam kết mang lại giá trị thực và sự bảo vệ 
-        vững chắc cho hàng triệu gia đình qua nhiều thế hệ.
-        """)
-        st.markdown("- **Lịch sử:** 170+ năm kinh nghiệm tài chính.\n- **Sứ mệnh:** Giữ trọn lời hứa với khách hàng.\n- **Uy tín:** Xếp hạng tài chính mức cao từ các tổ chức quốc tế.")
+        st.write("National Life Group là biểu tượng của sự tin cậy tại Hoa Kỳ từ năm 1848. Chúng tôi mang đến các giải pháp bảo vệ tài chính bền vững qua nhiều thế kỷ.")
+        st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.\n- **Vững mạnh:** Top đầu ngành tài chính.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # BÊN PHẢI: GIẢI PHÁP (DÒNG IUL)
+    # CỘT PHẢI: GIẢI PHÁP IUL
     with col_right:
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
         st.markdown('<p class="section-header">Giải Pháp Tài Chính IUL</p>', unsafe_allow_html=True)
@@ -132,22 +130,19 @@ if selected == "Trang Chủ":
         if img_i and os.path.exists(img_i):
             st.image(img_i, use_container_width=True)
         else:
-            st.info("Anh vào mục Cấu Hình để upload ảnh minh họa IUL tại đây.")
+            st.info("Vào mục Cấu Hình để upload ảnh IUL.")
             
-        st.write(f"**{prof.get('slogan')}**")
-        st.write("""
-        Indexed Universal Life (IUL) là giải pháp đột phá, kết hợp hoàn hảo giữa bảo vệ sinh mạng 
-        và tích lũy tài sản thông minh. Đây là công cụ hưu trí và bảo vệ tối ưu cho người Việt tại Mỹ.
-        """)
-        st.markdown("- **Tích lũy:** Lãi suất theo chỉ số thị trường, bảo đảm 0% sàn.\n- **Thuế:** Rút tiền sử dụng không chịu thuế thu nhập.\n- **Quyền lợi sống:** Nhận tiền bồi thường khi mắc bệnh hiểm nghèo.")
+        st.write(f"**{prof.get('slogan', 'Sâu sắc - Tận tâm - Chuyên nghiệp')}**")
+        st.write("IUL là giải pháp tối ưu kết hợp bảo vệ sinh mạng và tích lũy hưu trí không thuế, bảo đảm an toàn vốn trước biến động thị trường.")
+        st.markdown("- **An toàn:** Bảo đảm 0% sàn.\n- **Linh hoạt:** Rút tiền không thuế.\n- **Toàn diện:** Quyền lợi sống ưu việt.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # NÚT ĐĂNG NHẬP (Để ở cuối, tinh tế)
+    # 3. Đăng nhập - Nằm ngoài các cột để không bị lệch bố cục
     if not st.session_state.authenticated:
         st.write("<br>", unsafe_allow_html=True)
-        with st.expander("🔐 TRUY CẬP HỆ THỐNG QUẢN TRỊ"):
-            u = st.text_input("Username")
-            p = st.text_input("Password", type="password")
+        with st.expander("🔐 QUẢN TRỊ HỆ THỐNG"):
+            u = st.text_input("Username", key="login_u")
+            p = st.text_input("Password", type="password", key="login_p")
             if st.button("XÁC NHẬN"):
                 if u == "Cong" and p == "admin123":
                     st.session_state.authenticated, st.session_state.role, st.session_state.username = True, "Admin", "Cong"
