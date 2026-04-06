@@ -1,7 +1,14 @@
 /* style.css */
 .stApp {
-    background-color: #f8fafd;
+    background-color: #ffffff;
     color: #1a1a1a;
+}
+.history-container {
+    height: 120px; 
+    overflow-y: auto; 
+    background: #f8fafd; 
+    padding: 10px; 
+    border-radius: 10px;
 }
 .history-entry {
     border-left: 3px solid #0056D2;
@@ -12,9 +19,4 @@
 .note-time {
     color: #666;
     font-size: 0.8em;
-}
-[data-testid="stExpander"] {
-    background-color: white;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
