@@ -6,7 +6,7 @@ import pytz
 import os
 import urllib.parse
 
-# --- 1. CẤU HÌNH HỆ THỐNG & CSS ĐẶC TRỊ (CHỈ ĐÁNH VÀO NÚT SỬA & UPLOAD) ---
+# --- 1. CẤU HÌNH & CSS (CHỈ GIỮ CSS CƠ BẢN, KHÔNG ẨN ICON) ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
@@ -18,37 +18,37 @@ st.markdown("""
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #f8fafc; }
     
-    /* 1. FIX NÚT UPLOAD: TRIỆT TIÊU CHỮ CŨ CHUẨN XÁC */
-    [data-testid="stFileUploaderDropzone"] div div { display: none !important; }
-    [data-testid="stFileUploaderDropzone"]::before { 
-        content: "Bấm để chọn File"; 
-        color: #0369a1; font-weight: 700; font-size: 14px;
-        display: block; width: 100%; text-align: center;
+    /* Card tại Trang Chủ */
+    .home-card {
+        background: white; padding: 20px; border-radius: 15px; 
+        border-top: 5px solid #00263e; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        text-align: center; margin-bottom: 20px;
     }
+    
+    /* Card Lead tại Vận Hành */
+    .client-card {
+        background: white; padding: 25px; border-radius: 16px;
+        border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+    
+    /* Link thực chiến */
+    .action-link {
+        color: #0369a1; text-decoration: none; font-weight: 600;
+        padding: 7px 12px; border-radius: 6px; background: #f1f5f9;
+        font-size: 13px; display: inline-block; margin: 2px;
+    }
+    .action-link:hover { background: #0ea5e9; color: white; }
 
-    /* 2. FIX NÚT SỬA: CHỈ ẨN TRONG KHU VỰC VẬN HÀNH (POPOVER) */
-    /* Dùng div bao ngoài để không làm mất mũi tên ở Sidebar */
-    div.stPopover button[data-testid="stPopoverTarget"] svg { 
-        display: none !important; 
+    .history-box {
+        background: #fdfdfd; border-radius: 8px; padding: 12px;
+        border-left: 3px solid #cbd5e1; height: 165px;
+        overflow-y: auto; font-size: 14px; line-height: 1.6;
     }
-    div.stPopover button[data-testid="stPopoverTarget"] p { 
-        display: none !important; 
+    .section-tag {
+        background: #f1f5f9; padding: 4px 10px; border-radius: 4px;
+        font-size: 11px; font-weight: 800; color: #475569; margin: 10px 0 5px 0;
     }
-    div.stPopover button[data-testid="stPopoverTarget"]::after { 
-        content: "⚙️ SỬA"; 
-        font-weight: 800; font-size: 13px; color: #1e293b;
-        display: block; width: 100%; text-align: center;
-    }
-
-    /* Giao diện Card Trang Chủ */
-    .home-card { background: white; padding: 25px; border-radius: 15px; border-top: 5px solid #00263e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 20px; }
-    .slogan-text { color: #64748b; font-size: 15px; margin-top: 15px; }
-
-    /* Card khách hàng Vận Hành */
-    .client-card { background: white; padding: 25px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-    .action-link { color: #0369a1; text-decoration: none; font-weight: 600; padding: 7px 12px; border-radius: 6px; background: #f1f5f9; font-size: 13px; display: inline-block; margin: 2px; }
-    .history-box { background: #fdfdfd; border-radius: 8px; padding: 12px; border-left: 3px solid #cbd5e1; height: 165px; overflow-y: auto; font-size: 14px; line-height: 1.6; }
-    .section-tag { background: #f1f5f9; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #475569; margin: 10px 0 5px 0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -60,9 +60,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, crm_id TEXT, crm_link TEXT, cell TEXT, work TEXT, email TEXT, state TEXT, owner TEXT, tags TEXT, status TEXT DEFAULT 'New', note TEXT DEFAULT '', last_updated TIMESTAMP)''')
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT, logo_app TEXT, img_national TEXT, img_iul TEXT)''')
-    for col in [('crm_link','TEXT'),('work','TEXT'),('email','TEXT'),('tags','TEXT'),('last_updated','TEXT')]:
-        try: c.execute(f"ALTER TABLE leads ADD COLUMN {col[0]} {col[1]}")
-        except: pass
     conn.commit(); conn.close()
 
 init_db()
@@ -76,7 +73,7 @@ def get_profile():
 
 prof = get_profile()
 
-# --- 2. TẦNG QUẢN TRỊ ---
+# --- 2. QUẢN TRỊ SIDEBAR ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
 
 with st.sidebar:
@@ -89,23 +86,23 @@ with st.sidebar:
             st.session_state.authenticated = False; st.rerun()
     else: selected = "Trang Chủ"
 
-# --- 3. HIỂN THỊ ---
+# --- 3. HIỂN THỊ PHÂN HỆ ---
 if selected == "Trang Chủ":
     st.markdown(f"<h2 style='text-align:center; color:#00263e; margin-bottom:30px;'>{prof.get('slogan')}</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("<div class='home-card'><h3>National Life Group</h3></div>", unsafe_allow_html=True)
         if prof.get('img_national'): st.image(prof['img_national'], use_container_width=True)
-        st.markdown("<p class='slogan-text'>Uy tín từ 1848 - Giá trị bền vững cho gia đình Việt tại Mỹ.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748b; margin-top:10px;'>Cung cấp sự an tâm tài chính từ năm 1848.</p>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div class='home-card' style='border-top-color:#00a9e0;'><h3>Giải pháp IUL</h3></div>", unsafe_allow_html=True)
         if prof.get('img_iul'): st.image(prof['img_iul'], use_container_width=True)
-        st.markdown(f"<p class='slogan-text'>{prof.get('slogan')}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#64748b; margin-top:10px;'>{prof.get('slogan')}</p>", unsafe_allow_html=True)
     
     if not st.session_state.authenticated:
-        with st.expander("🔐 QUẢN TRỊ"):
-            u = st.text_input("User", key="u_l"); p = st.text_input("Pass", type="password", key="p_l")
-            if st.button("ĐĂNG NHẬP"):
+        with st.expander("🔐 ĐĂNG NHẬP QUẢN TRỊ"):
+            u = st.text_input("Username", key="u_l"); p = st.text_input("Password", type="password", key="p_l")
+            if st.button("XÁC NHẬN"):
                 if u == "Cong" and p == "admin123": st.session_state.authenticated = True; st.rerun()
 
 elif selected == "Vận Hành":
@@ -114,7 +111,7 @@ elif selected == "Vận Hành":
     tab_list, tab_add = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
     
     with tab_list:
-        q_s = st.text_input("🔍 Tìm kiếm...", placeholder="Tên, số điện thoại...")
+        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại...")
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
         for idx, row in filtered.iterrows():
             u_key = f"ld_{row['id']}"; c_cell = clean_phone(row['cell']); c_work = clean_phone(row.get('work',''))
@@ -123,12 +120,12 @@ elif selected == "Vận Hành":
                 <div class="client-card">
                     <div style="display: flex; justify-content: space-between;">
                         <div style="flex: 4.8;">
-                            <div class="client-title">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none; color:#0ea5e9;">🆔 {row['crm_id']}</a></div>
+                            <div style="font-size: 19px; font-weight: 700;">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none;">🆔 {row['crm_id']}</a></div>
                             <div style="margin: 8px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b></div>
                             <div>
                                 <a href="tel:{c_cell}" class="action-link">📞 {c_cell}</a>
                                 <a href="rcmobile://call?number={c_cell}" class="action-link">RC Cell</a>
-                                <a href="rcmobile://call?number={c_work}" class="action-link">🏢 Work Call</a>
+                                <a href="rcmobile://call?number={c_work}" class="action-link">🏢 Work: {c_work}</a>
                                 <a href="rcmobile://sms?number={c_cell}" class="action-link">💬 SMS</a>
                                 <a href="mailto:{row['email']}" class="action-link">✉️ Email</a>
                                 <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting_{urllib.parse.quote(str(row['name']))}" target="_blank" class="action-link">📅 Calendar</a>
@@ -138,7 +135,7 @@ elif selected == "Vận Hành":
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
-                c_n, c_s = st.columns([8.2, 1.8])
+                c_n, c_s = st.columns([8, 2])
                 with c_n:
                     with st.form(key=f"nt_{u_key}", clear_on_submit=True):
                         ni = st.text_input("Ghi nhanh...", label_visibility="collapsed")
@@ -148,7 +145,8 @@ elif selected == "Vận Hành":
                             conn.execute("UPDATE leads SET note=?, last_updated=? WHERE id=?", (new_n, n_ny.isoformat(), row['id']))
                             conn.commit(); st.rerun()
                 with c_s:
-                    with st.popover("SỬA", use_container_width=True):
+                    # Dùng Popover nguyên bản của Streamlit, không ẩn gì cả
+                    with st.popover("⚙️ SỬA HỒ SƠ", use_container_width=True):
                         with st.form(f"f_ed_{u_key}"):
                             st.markdown("<div class='section-tag'>HỒ SƠ</div>", unsafe_allow_html=True)
                             un = st.text_input("Tên", row['name'])
@@ -184,7 +182,9 @@ elif selected == "Cấu Hình":
     st.markdown("<h2>⚙️ Cấu Hình</h2>", unsafe_allow_html=True)
     with st.form("config"):
         new_sl = st.text_input("Slogan dòng IUL", value=prof.get('slogan'))
-        c1, c2, c3 = st.columns(3); up_l = c1.file_uploader("Logo Sidebar"); up_n = c2.file_uploader("Ảnh National"); up_i = c3.file_uploader("Ảnh IUL")
+        up_l = st.file_uploader("Logo Sidebar", type=['png', 'jpg', 'jpeg'])
+        up_n = st.file_uploader("Ảnh National", type=['png', 'jpg', 'jpeg'])
+        up_i = st.file_uploader("Ảnh IUL", type=['png', 'jpg', 'jpeg'])
         if st.form_submit_button("LƯU THAY ĐỔI"):
             conn = sqlite3.connect(DB_NAME)
             if up_l:
