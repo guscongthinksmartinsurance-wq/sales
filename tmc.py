@@ -3,10 +3,11 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 import pytz
+import io
 import os
-import urllib.parse
+from streamlit_option_menu import option_menu
 
-# --- 1. CẤU HÌNH HỆ THỐNG ---
+# --- 1. CẤU HÌNH ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
@@ -43,35 +44,65 @@ def get_profile():
     conn.close()
     return dict(res) if res else {}
 
-# --- 2. SIDEBAR & ĐIỀU HƯỚNG ---
 prof = get_profile()
 
+# --- 2. SIDEBAR & MENU ---
 with st.sidebar:
-    logo_app = prof.get('logo_app')
-    if logo_app and os.path.exists(logo_app):
-        st.image(logo_app, use_container_width=True)
-    else:
-        st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+    logo = prof.get('logo_app')
+    if logo and os.path.exists(logo): st.image(logo, use_container_width=True)
+    else: st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
     
     st.divider()
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-
+    if 'authenticated' not in st.session_state: st.session_state.authenticated = False
+    
     if st.session_state.authenticated:
-        from streamlit_option_menu import option_menu
-        selected = option_menu(
-            menu_title=None,
-            options=["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"],
-            styles={"nav-link-selected": {"background-color": "#00263e"}}
-        )
+        selected = option_menu(None, ["Trang Chủ", "Mắt Thần", "Vận Hành", "Cấu Hình"], 
+                               styles={"nav-link-selected": {"background-color": "#00263e"}})
         if st.sidebar.button("ĐĂNG XUẤT", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
     else:
         selected = "Trang Chủ"
 
-# --- 3. VẬN HÀNH ---
-if selected == "Vận Hành":
+# --- 3. LOGIC HIỂN THỊ ---
+
+# PHẦN 1: TRANG CHỦ
+if selected == "Trang Chủ":
+    st.markdown('<div class="hero-banner"><h1>NATIONAL LIFE GROUP</h1><p>Experience the Peace of Mind Since 1848</p></div>', unsafe_allow_html=True)
+    
+    col_left, col_right = st.columns(2, gap="small")
+    with col_left:
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.markdown('<p class="section-header">Tập Đoàn National Life Group</p>', unsafe_allow_html=True)
+        img_n = prof.get('img_national')
+        if img_n and os.path.exists(img_n): st.image(img_n, use_container_width=True)
+        else: st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848, mang đến các giải pháp bảo vệ tài chính bền vững.")
+        st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_right:
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.markdown('<p class="section-header">Giải Pháp Tài Chính IUL</p>', unsafe_allow_html=True)
+        img_i = prof.get('img_iul')
+        if img_i and os.path.exists(img_i): st.image(img_i, use_container_width=True)
+        else: st.info("Vào mục Cấu Hình để upload ảnh IUL.")
+        st.write(f"**{prof.get('slogan', 'Sâu sắc - Tận tâm - Chuyên nghiệp')}**")
+        st.write("IUL kết hợp bảo vệ sinh mạng và tích lũy hưu trí không thuế, bảo đảm an toàn vốn trước biến động thị trường.")
+        st.markdown("- **An toàn:** Bảo đảm 0% sàn.\n- **Linh hoạt:** Rút tiền không thuế.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    if not st.session_state.authenticated:
+        with st.expander("🔐 QUẢN TRỊ HỆ THỐNG"):
+            u = st.text_input("Username", key="u_home")
+            p = st.text_input("Password", type="password", key="p_home")
+            if st.button("XÁC NHẬN"):
+                if u == "Cong" and p == "admin123":
+                    st.session_state.authenticated = True
+                    st.rerun()
+
+# PHẦN 2: VẬN HÀNH
+elif selected == "Vận Hành":
     st.markdown("<div class='main-card'><h2>HỆ THỐNG VẬN HÀNH DỮ LIỆU</h2></div>", unsafe_allow_html=True)
     conn = sqlite3.connect(DB_NAME)
     df_m = pd.read_sql("SELECT * FROM leads", conn)
@@ -80,7 +111,7 @@ if selected == "Vận Hành":
     tab_list, tab_add = st.tabs(["DANH SÁCH LEAD", "THÊM MỚI HỒ SƠ"])
 
     with tab_list:
-        # DASHBOARD CHỈ SỐ
+        # Dashboard Chỉ số
         m1, m2, m3, m4 = st.columns(4)
         with m1: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000;'>TỔNG LEAD</p><div class='db-num-capsule'>{len(df_m)}</div></div>", unsafe_allow_html=True)
         with m2: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:green;'>MỚI</p><div class='db-num-capsule'>{len(df_m[df_m['status'] == 'New'])}</div></div>", unsafe_allow_html=True)
@@ -88,89 +119,79 @@ if selected == "Vận Hành":
             def is_late(r):
                 try: 
                     dt = datetime.fromisoformat(r['last_updated'])
-                    if dt.tzinfo is None: dt = NY_TZ.localize(dt)
-                    return (n_ny - dt).days > 7
+                    return (n_ny - NY_TZ.localize(dt) if dt.tzinfo is None else n_ny - dt).days > 7
                 except: return False
-            late_count = len(df_m[df_m.apply(is_late, axis=1)])
-            st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:red;'>TRỄ (>7D)</p><div class='db-num-capsule' style='color:red;'>{late_count}</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:red;'>TRỄ (>7D)</p><div class='db-num-capsule' style='color:red;'>{len(df_m[df_m.apply(is_late, axis=1)])}</div></div>", unsafe_allow_html=True)
         with m4: st.markdown(f"<div class='db-card'><p style='margin:0; font-weight:1000; color:blue;'>CHỐT</p><div class='db-num-capsule' style='color:blue;'>{len(df_m[df_m['status'] == 'Closed'])}</div></div>", unsafe_allow_html=True)
 
         st.divider()
-        c_sch, c_sld = st.columns([7, 3])
-        q_s = c_sch.text_input("TÌM KIẾM HỒ SƠ...", key="q_search").lower().strip()
-        days_limit = c_sld.slider("LỌC KHÁCH TRỄ (NGÀY)", 0, 90, 90) 
-
+        q_s = st.text_input("TÌM KIẾM HỒ SƠ...", key="q_search").lower().strip()
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
 
         for idx, row in filtered.iterrows():
-            u_key = f"ld_{row['id']}"
             c_cell = clean_phone(row['cell'])
-            c_work = clean_phone(row.get('work', ''))
-            
             with st.container(border=True):
                 ci, ce = st.columns([9.5, 0.5])
                 with ci:
-                    st.markdown(f"<span class='client-title'>{row['name']}</span> | <a href='{row['crm_link']}' target='_blank'>ID: {row['crm_id']}</a>", unsafe_allow_html=True)
-                    st.markdown(f"**TIỂU BANG:** {row['state']} | **OWNER:** {row['owner']} | **STATUS:** {row['status']} | **TAGS:** {row.get('tags', '')}")
-                    st.markdown(f"**CELL:** <a href='tel:{c_cell}'>{c_cell}</a> | **WORK:** <a href='tel:{c_work}'>{c_work}</a>", unsafe_allow_html=True)
-                    
-                    c_act1, c_act2, c_act3 = st.columns([1, 1, 8])
-                    c_act1.markdown(f"<a href='rcmobile://sms?number={c_cell}'>SMS</a>", unsafe_allow_html=True)
-                    c_act2.markdown(f"<a href='mailto:{row['email']}'>EMAIL</a>", unsafe_allow_html=True)
-
+                    st.markdown(f"**{row['name']}** | ID: {row['crm_id']}")
+                    st.markdown(f"BANG: {row['state']} | OWNER: {row['owner']} | STATUS: {row['status']}")
+                    st.markdown(f"CELL: {c_cell} | EMAIL: {row['email']}")
+                    st.write(f"VỪA CẬP NHẬT: {row['last_updated']}")
                 with ce:
                     with st.popover("SỬA"):
-                        with st.form(f"f_ed_{u_key}"):
+                        with st.form(f"f_ed_{row['id']}"):
                             un = st.text_input("Tên", row['name'])
                             ui = st.text_input("ID", row['crm_id'])
-                            ul = st.text_input("Link", row['crm_link'])
                             uc = st.text_input("Cell", row['cell'])
-                            uw = st.text_input("Work", row['work'])
-                            ue = st.text_input("Email", row['email'])
-                            us = st.text_input("State", row['state'])
                             uo = st.text_input("Owner", row['owner'])
-                            utg = st.text_input("Tags", row['tags'])
-                            st_list = ["New", "Contacted", "Following", "Closed"]
-                            ust = st.selectbox("Status", st_list, index=st_list.index(row['status']) if row['status'] in st_list else 0)
-                            if st.form_submit_button("CẬP NHẬT"):
-                                conn.execute("""UPDATE leads SET name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=?, status=?, last_updated=? WHERE id=?""",
-                                             (un, ui, ul, uc, uw, ue, us, uo, utg, ust, datetime.now(NY_TZ).isoformat(), row['id']))
+                            ust = st.selectbox("Status", ["New", "Contacted", "Following", "Closed"], index=0)
+                            if st.form_submit_button("LƯU"):
+                                conn.execute("UPDATE leads SET name=?, crm_id=?, cell=?, owner=?, status=?, last_updated=? WHERE id=?",
+                                             (un, ui, uc, uo, ust, datetime.now(NY_TZ).isoformat(), row['id']))
                                 conn.commit(); st.rerun()
 
     with tab_add:
-        st.markdown("### NHẬP HỒ SƠ KHÁCH HÀNG MỚI")
-        with st.form("add_new_form", clear_on_submit=True):
-            r1c1, r1c2, r1c3 = st.columns(3)
-            an_name = r1c1.text_input("Tên khách hàng")
-            an_id = r1c2.text_input("CRM ID")
-            an_link = r1c3.text_input("CRM Link")
+        with st.form("add_new", clear_on_submit=True):
+            st.markdown("### NHẬP HỒ SƠ MỚI")
+            c1, c2, c3 = st.columns(3)
+            an = c1.text_input("Tên khách")
+            ai = c2.text_input("CRM ID")
+            ac = c3.text_input("Cell (Số điện thoại)")
             
-            r2c1, r2c2, r2c3 = st.columns(3)
-            an_cell = r2c1.text_input("Số điện thoại (Cell)")
-            an_work = r2c2.text_input("Số làm việc (Work)")
-            an_email = r2c3.text_input("Email")
-            
-            r3c1, r3c2, r3c3 = st.columns(3)
-            an_state = r3c1.text_input("Tiểu bang (State)")
-            an_owner = r3c2.text_input("Người phụ trách", value="Cong")
-            an_tags = r3c3.text_input("Thẻ (Tags)")
+            c4, c5, c6 = st.columns(3)
+            as_ = c4.text_input("State")
+            ao = c5.text_input("Owner", value="Cong")
+            ae = c6.text_input("Email")
             
             if st.form_submit_button("LƯU HỒ SƠ", use_container_width=True):
-                if an_name and an_cell:
+                if an and ac:
                     try:
-                        conn.execute("""INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, last_updated) 
-                                        VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                                     (an_name, an_id, an_link, an_cell, an_work, an_email, an_state, an_owner, an_tags, datetime.now(NY_TZ).isoformat()))
-                        conn.commit()
-                        st.success(f"Đã thêm thành công!"); st.rerun()
+                        conn.execute("INSERT INTO leads (name, crm_id, cell, state, owner, email, last_updated) VALUES (?,?,?,?,?,?,?)",
+                                     (an, ai, ac, as_, ao, ae, datetime.now(NY_TZ).isoformat()))
+                        conn.commit(); st.success("Đã thêm thành công!"); st.rerun()
                     except: st.error("Số điện thoại này đã tồn tại!")
-                else: st.warning("Vui lòng điền Tên và Số điện thoại.")
     conn.close()
 
-# --- TRANG CHỦ & CẤU HÌNH (GIỮ NGUYÊN) ---
-elif selected == "Trang Chủ":
-    # Giữ nguyên hàm show_home_page() của anh...
-    pass
+# PHẦN 3: CẤU HÌNH
 elif selected == "Cấu Hình":
-    # Giữ nguyên phần config_form của anh...
-    pass
+    st.markdown("<div class='main-card'><h2>CÀI ĐẶT HỆ THỐNG</h2></div>", unsafe_allow_html=True)
+    with st.form("config_form"):
+        new_slogan = st.text_input("Slogan dòng IUL", value=prof.get('slogan'))
+        c1, c2, c3 = st.columns(3)
+        up_l = c1.file_uploader("Logo Sidebar", type=["png", "jpg"])
+        up_n = c2.file_uploader("Ảnh National Life", type=["png", "jpg"])
+        up_i = c3.file_uploader("Ảnh dòng IUL", type=["png", "jpg"])
+        
+        if st.form_submit_button("LƯU TẤT CẢ"):
+            conn = sqlite3.connect(DB_NAME)
+            if up_l:
+                with open("logo_app.png", "wb") as f: f.write(up_l.getbuffer())
+                conn.execute("UPDATE profile SET logo_app='logo_app.png' WHERE id=1")
+            if up_n:
+                with open("img_nat.jpg", "wb") as f: f.write(up_n.getbuffer())
+                conn.execute("UPDATE profile SET img_national='img_nat.jpg' WHERE id=1")
+            if up_i:
+                with open("img_iul.jpg", "wb") as f: f.write(up_i.getbuffer())
+                conn.execute("UPDATE profile SET img_iul='img_iul.jpg' WHERE id=1")
+            conn.execute("UPDATE profile SET slogan=? WHERE id=1", (new_slogan,))
+            conn.commit(); conn.close(); st.success("Đã lưu!"); st.rerun()
