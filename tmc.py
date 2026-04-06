@@ -1,135 +1,148 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 from datetime import datetime
 import pytz
-import sqlite3
-import urllib.parse
+import io
+import plotly.express as px
 
-# --- 1. CẤU HÌNH & KẾT NỐI ---
+# --- 1. CẤU HÌNH & DATABASE ---
 st.set_page_config(page_title="TMC LEADER SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
-
-# Giả sử anh dùng SQLite để lưu trữ cho nhanh và đồng bộ
-DB_NAME = "tmc_leads_master.db"
+DB_NAME = "tmc_database.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Bảng Leads chính
     c.execute('''CREATE TABLE IF NOT EXISTS leads (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT,
                     phone TEXT UNIQUE,
                     crm_link TEXT,
-                    status TEXT,
+                    status TEXT DEFAULT 'New',
                     owner TEXT,
-                    note TEXT,
-                    last_interact TIMESTAMP)''')
-    # Bảng Staff để phân quyền
-    c.execute('''CREATE TABLE IF NOT EXISTS staff (
-                    username TEXT PRIMARY KEY,
-                    password TEXT,
-                    role TEXT)''') # Role: 'Admin' hoặc 'Sale'
+                    note TEXT DEFAULT '',
+                    last_updated TIMESTAMP)''')
     conn.commit()
     conn.close()
 
 init_db()
 
-# --- 2. NHẬN DIỆN KHÁCH HÀNG (MẮT THẦN) ---
+# Load CSS
+with open("style.css") as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+# --- 2. LOGIC MẮT THẦN (CHO KHÁCH HÀNG) ---
 query_params = st.query_params
-customer_id = query_params.get("id") # Link dạng: myapp.com/?id=714xxxx
+customer_id = query_params.get("id")
 
 if customer_id:
     conn = sqlite3.connect(DB_NAME)
-    df_all = pd.read_sql(f"SELECT * FROM leads WHERE phone = '{customer_id}'", conn)
+    # Tìm khách hàng theo số điện thoại (ID)
+    df_check = pd.read_sql(f"SELECT * FROM leads WHERE phone = '{customer_id}'", conn)
     
-    if not df_all.empty:
-        row = df_all.iloc[0]
-        # Ghi log Mắt Thần vào History
+    if not df_all.empty if 'df_all' in locals() else not df_check.empty:
+        row = df_check.iloc[0]
+        # Ghi log Mắt Thần vào History (Note)
         t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
-        new_log = f"<div style='color:gold;'>{t_now} 🔥 KHÁCH ĐANG XEM LINK</div>"
-        updated_note = new_log + str(row['note'])
+        view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> 🔥 KHÁCH ĐANG XEM LINK</div>"
         
-        conn.execute("UPDATE leads SET note = ?, last_interact = ? WHERE phone = ?", 
-                     (updated_note, datetime.now(NY_TZ).isoformat(), customer_id))
+        # Cập nhật DB: Chèn log vào đầu Note
+        new_note = view_log + str(row['note'])
+        conn.execute("UPDATE leads SET note = ?, last_updated = ? WHERE phone = ?", 
+                     (new_note, datetime.now(NY_TZ).isoformat(), customer_id))
         conn.commit()
         
-        # HIỂN THỊ CHO KHÁCH
+        # Giao diện cho khách xem
         st.title(f"Chào {row['name']}!")
-        st.write("---")
-        st.subheader("Bảng Minh Họa Quyền Lợi IUL")
-        st.info("Đây là giải pháp được thiết kế riêng cho chị. Em Công sẽ sớm liên hệ để giải đáp thắc mắc.")
-        # Anh có thể dùng st.image hoặc st.download_button để đưa Illustration ở đây
+        st.divider()
+        st.subheader("Bảng Minh Họa Giải Pháp IUL")
+        st.info("Tài liệu cá nhân hóa của bạn đang được hiển thị an toàn.")
+        # Anh có thể chèn link PDF/Ảnh ở đây
     else:
-        st.error("Hồ sơ không tồn tại hoặc link đã hết hạn.")
+        st.error("Liên kết không tồn tại hoặc đã hết hạn.")
     conn.close()
-    st.stop() # Dừng lại, không cho khách thấy phần Admin bên dưới
+    st.stop()
 
-# --- 3. HỆ THỐNG QUẢN TRỊ (ADMIN & STAFF) ---
+# --- 3. ĐĂNG NHẬP & PHÂN QUYỀN (CHO ADMIN/STAFF) ---
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    # Form đăng nhập đơn giản cho anh và Team
-    with st.container():
-        st.title("🔐 TMC Leader Login")
+    st.title("🔐 TMC Leader Login")
+    col1, col2 = st.columns([1, 2])
+    with col1:
         user = st.text_input("Username")
         pw = st.text_input("Password", type="password")
         if st.button("Đăng nhập"):
-            # Anh có thể check cứng ở đây cho nhanh hoặc check qua bảng staff
-            if user == "Cong" and pw == "123": # Ví dụ Admin
+            # Anh có thể sửa logic check user ở đây
+            if user == "Cong" and pw == "admin123":
                 st.session_state.authenticated = True
-                st.session_state.user_role = "Admin"
+                st.session_state.role = "Admin"
                 st.session_state.username = "Cong"
                 st.rerun()
-            elif user == "Sale1" and pw == "123": # Ví dụ Staff
+            elif user == "Sale1" and pw == "123":
                 st.session_state.authenticated = True
-                st.session_state.user_role = "Sale"
+                st.session_state.role = "Staff"
                 st.session_state.username = "Sale1"
                 st.rerun()
     st.stop()
 
 # --- 4. GIAO DIỆN QUẢN LÝ ---
-st.title(f"🚀 Quản Lý Leads - {st.session_state.username}")
+st.title(f"🚀 QUẢN LÝ LEADS - {st.session_state.username}")
 
 conn = sqlite3.connect(DB_NAME)
-df_leads = pd.read_sql("SELECT * FROM leads", conn)
+df_m = pd.read_sql("SELECT * FROM leads", conn)
 
-# PHÂN QUYỀN THÔNG MINH
-if st.session_state.user_role == "Admin":
-    display_df = df_leads # Anh thấy hết
+# Phân quyền: Staff chỉ thấy khách mình quản lý
+if st.session_state.role == "Admin":
+    filtered_df = df_m
 else:
-    display_df = df_leads[df_leads['owner'] == st.session_state.username] # Staff thấy khách của họ
+    filtered_df = df_m[df_m['owner'] == st.session_state.username]
 
-# HIỂN THỊ DANH SÁCH (Dùng cấu trúc Container giống file cũ của anh)
-q_search = st.text_input("🔍 Tìm tên hoặc số điện thoại...").lower()
+# Thống kê nhanh
+m1, m2, m3 = st.columns(3)
+m1.metric("Tổng Leads", len(filtered_df))
+m2.metric("Khách đang xem", len(filtered_df[filtered_df['note'].str.contains("KHÁCH ĐANG XEM", na=False)]))
 
-for idx, row in display_df.iterrows():
-    if q_search in row['name'].lower() or q_search in str(row['phone']):
+# Tìm kiếm & Hiển thị
+q_s = st.text_input("🔍 Tìm tên hoặc số điện thoại...").lower()
+
+for idx, row in filtered_df.iterrows():
+    if q_s in row['name'].lower() or q_s in str(row['phone']):
         with st.container(border=True):
             c1, c2, c3 = st.columns([3, 5, 2])
             with c1:
                 st.markdown(f"### {row['name']}")
                 st.write(f"📞 {row['phone']}")
-                st.caption(f"Trạng thái: {row['status']}")
-                
-                # Tạo link Mắt Thần để anh copy gửi RingCentral
-                actual_url = "https://your-app-link.streamlit.app"
-                tracking_link = f"{actual_url}/?id={row['phone']}"
+                tracking_link = f"https://your-app-url.streamlit.app/?id={row['phone']}"
                 st.code(tracking_link, language=None)
+                st.caption("Copy link này gửi RingCentral")
                 
             with c2:
-                st.markdown("**Lịch sử chăm sóc (Mắt thần báo ở đây):**")
-                st.markdown(f"<div style='height:100px; overflow-y:auto; border:1px solid #444; padding:5px;'>{row['note']}</div>", unsafe_allow_html=True)
+                st.markdown("**History / Mắt Thần:**")
+                st.markdown(f"<div style='height:120px; overflow-y:auto; background:#111; padding:10px;'>{row['note']}</div>", unsafe_allow_html=True)
             
             with c3:
-                # Nút cập nhật nhanh Note
-                new_note = st.text_input("Ghi chú nhanh", key=f"note_{row['phone']}")
-                if st.button("Lưu", key=f"btn_{row['phone']}"):
+                new_msg = st.text_input("Ghi chú nhanh", key=f"in_{row['id']}")
+                if st.button("Lưu", key=f"btn_{row['id']}"):
                     t_str = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
-                    updated_note = f"<div>{t_str} {new_note}</div>" + row['note']
-                    conn.execute("UPDATE leads SET note = ? WHERE phone = ?", (updated_note, row['phone']))
+                    updated_note = f"<div class='history-entry'><span class='note-time'>{t_str}</span> {new_msg}</div>" + row['note']
+                    conn.execute("UPDATE leads SET note = ? WHERE id = ?", (updated_note, row['id']))
                     conn.commit()
                     st.rerun()
+
+# --- 5. NÚT BACKUP EXCEL (GIẢI QUYẾT NỖI LO MẤT DATA) ---
+st.divider()
+if st.button("✨ XUẤT FILE EXCEL BACKUP (VIP)"):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        filtered_df.to_excel(writer, index=False, sheet_name='Leads_Backup')
+    st.download_button(
+        label="📥 Tải file Backup về máy",
+        data=output.getvalue(),
+        file_name=f"TMC_Backup_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 conn.close()
