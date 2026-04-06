@@ -6,44 +6,53 @@ import pytz
 import os
 import urllib.parse
 
-# --- 1. CẤU HÌNH HỆ THỐNG & CSS NÂNG CAO ---
+# --- 1. CẤU HÌNH HỆ THỐNG & CSS ĐẶC TRỊ ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 n_ny = datetime.now(NY_TZ)
 DB_NAME = "tmc_database.db"
 
-# CSS ĐẶC TRỊ: DIỆT TẬN GỐC LỖI DOUBLE CHỮ VÀ CHỒNG LẤN
+# CSS TỔNG LỰC: DIỆT LỖI ĐÈ BÓNG CHỮ VÀ ICON
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #f8fafc; }
     
-    /* FIX LỖI DOUBLE CHỮ Ở NÚT UPLOAD */
-    [data-testid="stFileUploader"] section { padding: 0 !important; }
-    [data-testid="stFileUploader"] label { font-weight: 700 !important; margin-bottom: 10px !important; }
-    [data-testid="stFileUploaderDropzone"] div div { display: none !important; } /* Ẩn chữ Browse files mặc định */
+    /* 1. FIX NÚT UPLOAD: TRIỆT TIÊU CHỮ CŨ */
+    [data-testid="stFileUploaderDropzone"] div div { 
+        opacity: 0 !important; 
+        height: 0 !important;
+        position: absolute !important;
+    }
     [data-testid="stFileUploaderDropzone"]::before { 
-        content: "Chọn File"; 
-        color: #0369a1; font-weight: 600; font-size: 14px;
+        content: "Bấm để chọn File"; 
+        color: #0369a1; font-weight: 700; font-size: 14px;
+        display: block; width: 100%; text-align: center;
     }
 
-    /* FIX LỖI DOUBLE CHỮ Ở NÚT SỬA (POPOVER) */
-    button[data-testid="stPopoverTarget"] { border: 1px solid #cbd5e1 !important; height: 38px !important; }
-    button[data-testid="stPopoverTarget"] svg { display: none !important; }
+    /* 2. FIX NÚT SỬA (POPOVER): DIỆT MŨI TÊN EXPAND_MORE */
+    button[data-testid="stPopoverTarget"] svg { 
+        display: none !important; 
+        visibility: hidden !important; 
+    }
     button[data-testid="stPopoverTarget"] p { 
-        display: none !important; /* Ẩn toàn bộ p mặc định để tránh đè chữ */
+        display: none !important; 
     }
     button[data-testid="stPopoverTarget"]::after { 
         content: "⚙️ SỬA"; 
-        font-weight: 700; font-size: 13px; color: #1e293b;
+        font-weight: 800; font-size: 13px; color: #1e293b;
+        display: block; width: 100%; text-align: center;
+    }
+    /* Xóa bỏ khoảng trống thừa của icon đã ẩn */
+    button[data-testid="stPopoverTarget"] div[data-testid="stMarkdownContainer"] {
+        display: none !important;
     }
 
-    /* Giao diện Card */
+    /* Giao diện Card & Dashboard */
     .home-card { background: white; padding: 25px; border-radius: 15px; border-top: 5px solid #00263e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 20px; }
     .client-card { background: white; padding: 25px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
     .action-link { color: #0369a1; text-decoration: none; font-weight: 600; padding: 7px 12px; border-radius: 6px; background: #f1f5f9; font-size: 13px; display: inline-block; margin: 2px; }
-    .action-link:hover { background: #0ea5e9; color: white; }
     .history-box { background: #fdfdfd; border-radius: 8px; padding: 12px; border-left: 3px solid #cbd5e1; height: 165px; overflow-y: auto; font-size: 14px; line-height: 1.6; }
     .section-tag { background: #f1f5f9; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #475569; margin: 10px 0 5px 0; }
     </style>
@@ -73,7 +82,7 @@ def get_profile():
 
 prof = get_profile()
 
-# --- 2. TẦNG KHÁCH HÀNG (?id=) ---
+# --- 2. TẦNG KHÁCH HÀNG ---
 id_khach = st.query_params.get("id")
 if id_khach:
     conn = sqlite3.connect(DB_NAME)
@@ -101,14 +110,14 @@ with st.sidebar:
             st.session_state.authenticated = False; st.rerun()
     else: selected = "Trang Chủ"
 
-# --- 4. HIỂN THỊ PHÂN HỆ ---
+# --- 4. PHÂN HỆ CHI TIẾT ---
 if selected == "Trang Chủ":
     st.markdown(f"<h2 style='text-align:center; color:#00263e; margin-bottom:30px;'>{prof.get('slogan')}</h2>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("<div class='home-card'><h3>National Life Group</h3></div>", unsafe_allow_html=True)
         if prof.get('img_national'): st.image(prof['img_national'], use_container_width=True)
-        st.markdown("<p style='color:#64748b; font-size:15px; margin-top:15px;'>Cung cấp giải pháp bảo vệ tài chính từ năm 1848. Chúng tôi đồng hành cùng sự thịnh vượng của gia đình bạn.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#64748b; font-size:15px; margin-top:15px;'>Phục vụ từ 1848 - Giá trị bền bỉ cùng thời gian.</p>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div class='home-card' style='border-top-color:#00a9e0;'><h3>Giải pháp IUL</h3></div>", unsafe_allow_html=True)
         if prof.get('img_iul'): st.image(prof['img_iul'], use_container_width=True)
@@ -123,10 +132,10 @@ if selected == "Trang Chủ":
 elif selected == "Vận Hành":
     conn = sqlite3.connect(DB_NAME)
     df_m = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    tab_list, tab_add = st.tabs(["📊 DANH SÁCH LEAD", "➕ THÊM HỒ SƠ"])
+    tab_list, tab_add = st.tabs(["📊 DANH SÁCH LEAD", "➕ TIẾP NHẬN HỒ SƠ"])
     
     with tab_list:
-        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại, bang...")
+        q_s = st.text_input("🔍 Tìm kiếm hồ sơ...", placeholder="Tên, số điện thoại...")
         filtered = df_m[df_m.apply(lambda r: q_s in str(r).lower(), axis=1)]
         for idx, row in filtered.iterrows():
             u_key = f"ld_{row['id']}"; c_cell = clean_phone(row['cell']); c_work = clean_phone(row.get('work',''))
@@ -136,7 +145,7 @@ elif selected == "Vận Hành":
                     <div style="display: flex; justify-content: space-between;">
                         <div style="flex: 4.8;">
                             <div class="client-title">{row['name']} | <a href="{row['crm_link']}" target="_blank" style="text-decoration:none; color:#0ea5e9;">🆔 {row['crm_id']}</a></div>
-                            <div style="margin: 8px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b> | 🏷️ <i>{row.get('tags','')}</i></div>
+                            <div style="margin: 8px 0; font-size: 14px; color:#64748b;">📍 {row['state']} | 👤 {row['owner']} | 🏷️ <b>{row['status']}</b></div>
                             <div>
                                 <a href="tel:{c_cell}" class="action-link">📞 {c_cell}</a>
                                 <a href="rcmobile://call?number={c_cell}" class="action-link">RC Cell</a>
@@ -160,15 +169,12 @@ elif selected == "Vận Hành":
                             conn.execute("UPDATE leads SET note=?, last_updated=? WHERE id=?", (new_n, n_ny.isoformat(), row['id']))
                             conn.commit(); st.rerun()
                 with c_s:
-                    with st.popover("SỬA", use_container_width=True): # Chữ SỬA đã được CSS gán qua ::after
+                    with st.popover("SỬA", use_container_width=True):
                         with st.form(f"f_ed_{u_key}"):
-                            st.markdown("<div class='section-tag'>HỒ SƠ</div>", unsafe_allow_html=True)
                             un = st.text_input("Tên", row['name'])
                             e1, e2 = st.columns(2); ui = e1.text_input("ID", row['crm_id']); ul = e2.text_input("Link", row['crm_link'])
-                            st.markdown("<div class='section-tag'>LIÊN LẠC</div>", unsafe_allow_html=True)
                             e3, e4 = st.columns(2); uc = e3.text_input("Cell", row['cell']); uw = e4.text_input("Work", row.get('work',''))
                             ue = st.text_input("Email", row.get('email',''))
-                            st.markdown("<div class='section-tag'>PHÂN LOẠI</div>", unsafe_allow_html=True)
                             e5, e6 = st.columns(2); us = e5.text_input("State", row.get('state','')); uo = e6.text_input("Owner", row['owner'])
                             utg = st.text_input("Tags", row.get('tags',''))
                             st_l = ["New", "Contacted", "Following", "Closed"]
@@ -180,16 +186,15 @@ elif selected == "Vận Hành":
 
     with tab_add:
         st.markdown("### ➕ TIẾP NHẬN HỒ SƠ MỚI (10 TRƯỜNG)")
-        with st.form("add_new_lead_full", clear_on_submit=True):
+        with st.form("add_new_f", clear_on_submit=True):
             r1 = st.columns(3); an = r1[0].text_input("Họ tên"); ai = r1[1].text_input("ID"); al = r1[2].text_input("Link")
             r2 = st.columns(3); ac = r2[0].text_input("Cell"); aw = r2[1].text_input("Work"); ae = r2[2].text_input("Email")
             r3 = st.columns(3); as_ = r3[0].text_input("State"); ao = r3[1].text_input("Owner", value="Cong"); at = r3[2].text_input("Tags")
             ast = st.selectbox("Status", ["New", "Contacted", "Following", "Closed"])
             if st.form_submit_button("LƯU HỒ SƠ", use_container_width=True):
-                if an and ac:
-                    conn.execute("INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, status, last_updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                                 (an, ai, al, ac, aw, ae, as_, ao, at, ast, n_ny.isoformat()))
-                    conn.commit(); st.success("Thành công!"); st.rerun()
+                conn.execute("INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, status, last_updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                             (an, ai, al, ac, aw, ae, as_, ao, at, ast, n_ny.isoformat()))
+                conn.commit(); st.success("Thành công!"); st.rerun()
     conn.close()
 
 elif selected == "Cấu Hình":
@@ -210,12 +215,3 @@ elif selected == "Cấu Hình":
                 conn.execute("UPDATE profile SET img_iul='img_iul.jpg'")
             conn.execute("UPDATE profile SET slogan=? WHERE id=1", (new_sl,))
             conn.commit(); conn.close(); st.success("Đã lưu!"); st.rerun()
-
-elif selected == "Mắt Thần":
-    st.markdown("<h2>👁️ Theo dõi Real-time</h2>", unsafe_allow_html=True)
-    conn = sqlite3.connect(DB_NAME)
-    df_eye = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%KHÁCH ĐANG XEM%' ORDER BY last_updated DESC", conn)
-    for _, row in df_eye.iterrows():
-        with st.container(border=True):
-            st.write(f"Khách: **{row['name']}** ({row['cell']})"); st.markdown(row['note'], unsafe_allow_html=True)
-    conn.close()
