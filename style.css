@@ -1,24 +1,37 @@
-/* style.css */
+/* style.css - ELITE BLUE & WHITE INTERFACE */
 .stApp {
-    background-color: #eef2f6; /* Xanh biển nhạt cực nhẹ */
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); /* Nền xanh biển nhạt có gradient */
 }
+
+/* Sidebar phong cách hiện đại */
 [data-testid="stSidebar"] {
-    background-color: #f0f2f6; /* Xám nhạt chuyên nghiệp */
+    background-color: #ffffff !important;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
 }
+
+/* Khối Card nội dung trắng tinh khôi, bo góc 20px */
 .main-card {
-    background-color: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    border: 1px solid #ffffff;
+    margin-bottom: 25px;
 }
-.tmc-title {
-    color: #0056D2;
-    font-weight: 800;
-}
-.history-container {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 15px;
+
+/* Hiệu ứng cho các dòng Note Mắt Thần */
+.history-entry {
+    background: #f8fafd;
     border-left: 5px solid #0056D2;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 0.95em;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.02);
+}
+
+.tmc-title {
+    color: #1a202c;
+    font-weight: 800;
+    letter-spacing: -0.5px;
 }
