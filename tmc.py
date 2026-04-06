@@ -21,12 +21,15 @@ except: pass
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Bảng Leads
+    # Bảng Leads với đầy đủ 10 trường dữ liệu anh yêu cầu
     c.execute('''CREATE TABLE IF NOT EXISTS leads (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT, phone TEXT UNIQUE, state TEXT,
-                    status TEXT DEFAULT 'New', owner TEXT,
-                    note TEXT DEFAULT '', last_updated TIMESTAMP)''')
+                    name TEXT, crm_id TEXT, crm_link TEXT,
+                    cell TEXT UNIQUE, work TEXT, email TEXT,
+                    state TEXT, owner TEXT, tags TEXT,
+                    status TEXT DEFAULT 'New', note TEXT DEFAULT '', 
+                    last_updated TIMESTAMP)''')
+    
     # Bảng Profile
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT)''')
     
@@ -55,7 +58,6 @@ def get_profile():
 prof = get_profile()
 
 with st.sidebar:
-    # Hiển thị Logo App từ phần Cấu hình
     logo_app = prof.get('logo_app')
     if logo_app and os.path.exists(logo_app):
         st.image(logo_app, use_container_width=True)
@@ -86,14 +88,13 @@ id_khach = query_params.get("id")
 if id_khach:
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
-    row = conn.execute("SELECT * FROM leads WHERE phone = ?", (id_khach,)).fetchone()
+    row = conn.execute("SELECT * FROM leads WHERE cell = ?", (id_khach,)).fetchone()
     if row:
-        # MẮT THẦN: Ghi log khi khách xem link
         t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
         view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> <span style='color:#f57c00; font-weight:bold;'>🔥 KHÁCH ĐANG XEM</span></div>"
         if "KHÁCH ĐANG XEM" not in str(row['note'])[:150]:
             new_note = view_log + str(row['note'])
-            conn.execute("UPDATE leads SET note = ?, last_updated = ? WHERE phone = ?", 
+            conn.execute("UPDATE leads SET note = ?, last_updated = ? WHERE cell = ?", 
                          (new_note, datetime.now(NY_TZ).isoformat(), id_khach))
             conn.commit()
 
@@ -107,7 +108,6 @@ if id_khach:
 # --- 4. CÁC HÀM HIỂN THỊ TỪNG PHẦN ---
 
 def show_home_page():
-    # Ép CSS để xóa sạch ô trắng và giãn cách đều
     st.markdown("""
         <style>
         [data-testid="column"] { width: 100% !important; flex: 1 1 calc(50% - 1rem) !important; }
@@ -127,8 +127,8 @@ def show_home_page():
             st.image(img_n, use_container_width=True)
         else:
             st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
-        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848, mang đến các giải pháp bảo vệ tài chính bền vững.")
-        st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.\n- **Vững mạnh:** Top đầu tài chính.")
+        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848.")
+        st.markdown("- **Uy tín:** 170+ năm.\n- **Cam kết:** Giữ trọn lời hứa.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_right:
@@ -140,8 +140,8 @@ def show_home_page():
         else:
             st.info("Vào mục Cấu Hình để upload ảnh IUL.")
         st.write(f"**{prof.get('slogan')}**")
-        st.write("IUL kết hợp bảo vệ sinh mạng và tích lũy hưu trí không thuế, an toàn vốn trước biến động thị trường.")
-        st.markdown("- **An toàn:** Bảo đảm 0% sàn.\n- **Linh hoạt:** Rút tiền không thuế.\n- **Toàn diện:** Quyền lợi sống ưu việt.")
+        st.write("IUL kết hợp bảo vệ và tích lũy hưu trí không thuế.")
+        st.markdown("- **An toàn:** 0% sàn.\n- **Linh hoạt:** Rút tiền không thuế.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     if not st.session_state.authenticated:
@@ -161,11 +161,71 @@ if selected == "Trang Chủ":
 
 elif selected == "Mắt Thần":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👁️ THEO DÕI REAL-TIME</h2></div>", unsafe_allow_html=True)
-    st.info("Phần tính năng Mắt Thần đang sẵn sàng để anh chỉnh sửa.")
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    df = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%KHÁCH ĐANG XEM%' ORDER BY last_updated DESC", conn)
+    if not df.empty:
+        for idx, row in df.iterrows():
+            with st.container(border=True):
+                st.write(f"🔥 **{row['name']}** ({row['cell']})")
+                st.caption(f"Trạng thái: {row['status']} | Owner: {row['owner']}")
+                st.markdown(row['note'], unsafe_allow_html=True)
+    else:
+        st.info("Hiện chưa có khách hàng nào truy cập link.")
+    conn.close()
 
 elif selected == "Vận Hành":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ QUẢN LÝ HỆ THỐNG</h2></div>", unsafe_allow_html=True)
-    st.info("Phần tính năng Vận Hành đang sẵn sàng để anh chỉnh sửa.")
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    
+    t1, t2 = st.tabs(["📊 Danh sách khách", "➕ Thêm mới"])
+    
+    with t1:
+        df_all = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
+        for idx, row in df_all.iterrows():
+            with st.expander(f"👤 {row['name']} - {row['cell']} ({row['status']})"):
+                with st.form(f"edit_{row['id']}"):
+                    col1, col2, col3 = st.columns(3)
+                    un = col1.text_input("Tên", row['name'])
+                    ui = col2.text_input("ID", row['crm_id'] if row['crm_id'] else '')
+                    ul = col3.text_input("Link", row['crm_link'] if row['crm_link'] else '')
+                    
+                    col4, col5, col6 = st.columns(3)
+                    uc = col4.text_input("Cell", row['cell'])
+                    uw = col5.text_input("Work", row['work'] if row['work'] else '')
+                    ue = col6.text_input("Email", row['email'] if row['email'] else '')
+                    
+                    col7, col8, col9 = st.columns(3)
+                    us = col7.text_input("State", row['state'] if row['state'] else '')
+                    uo = col8.text_input("Owner", row['owner'] if row['owner'] else '')
+                    utg = col9.text_input("Tags", row['tags'] if row['tags'] else '')
+                    
+                    st_list = ["New", "Contacted", "Following", "Closed"]
+                    ust = st.selectbox("Status", st_list, index=st_list.index(row['status']) if row['status'] in st_list else 0)
+                    
+                    if st.form_submit_button("CẬP NHẬT"):
+                        conn.execute("""UPDATE leads SET 
+                            name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=?, status=?, last_updated=?
+                            WHERE id=?""", (un, ui, ul, uc, uw, ue, us, uo, utg, ust, datetime.now(NY_TZ).isoformat(), row['id']))
+                        conn.commit()
+                        st.success("Đã cập nhật dữ liệu!"); st.rerun()
+                        
+    with t2:
+        with st.form("add_new"):
+            st.write("### Nhập khách hàng mới")
+            n = st.text_input("Họ tên")
+            p = st.text_input("Số điện thoại (Cell)")
+            o = st.text_input("Owner", value="Cong")
+            if st.form_submit_button("LƯU HỒ SƠ"):
+                if n and p:
+                    try:
+                        conn.execute("INSERT INTO leads (name, cell, owner, last_updated) VALUES (?,?,?,?)",
+                                     (n, p, o, datetime.now(NY_TZ).isoformat()))
+                        conn.commit()
+                        st.success("Đã thêm khách hàng mới!"); st.rerun()
+                    except: st.error("Số điện thoại đã tồn tại!")
+    conn.close()
 
 elif selected == "Cấu Hình":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👤 CÀI ĐẶT HỆ THỐNG</h2></div>", unsafe_allow_html=True)
