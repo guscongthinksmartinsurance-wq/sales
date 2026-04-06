@@ -42,3 +42,41 @@
 [data-testid="stFileUploader"] section > div {
     display: none; /* Ẩn bớt các dòng chữ hướng dẫn rườm rà */
 }
+/* style.css - Bổ sung cho Dashboard Vận Hành */
+.db-card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+}
+.db-num-capsule {
+    font-size: 24px;
+    font-weight: 800;
+    color: #00263e;
+    margin-top: 5px;
+}
+.client-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #00263e;
+}
+.history-container {
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    height: 150px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+.history-entry {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 4px 0;
+}
+.note-time {
+    color: #888;
+    font-weight: bold;
+    margin-right: 5px;
+}
