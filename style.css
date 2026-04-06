@@ -1,30 +1,72 @@
-/* style.css */
+/* style.css - MODERN LIGHT & BLUE INTERFACE */
+
+/* 1. Tổng thể: Nền trắng sạch sẽ, Font chữ thanh thoát */
 .stApp {
-    background-color: #0e1117;
-    color: #ffffff;
+    background-color: #f8fafd; /* Trắng xám nhẹ, tạo chiều sâu */
+    color: #1a1a1a;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-.tmc-gold {
-    color: #ffd700;
-    font-weight: bold;
+/* 2. Tiêu đề: Màu xanh chuyên nghiệp */
+h1, h2, h3, .tmc-title {
+    color: #0056D2; /* Màu xanh đậm của tin cậy */
+    font-weight: 700;
 }
 
-.db-card {
-    background-color: #1e2130;
+/* 3. Khối Leads: Trắng, Bo góc lớn, Đổ bóng nhẹ (Card style like modern Web) */
+[data-testid="stVerticalBlock"] > [id^="stConnectionBlock"] {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 20px; /* Bo góc mềm mại */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Đổ bóng nhẹ, tạo cảm giác nổi */
+    border: 1px solid #eaeaea;
+    margin-bottom: 20px;
+}
+
+/* 4. Mắt Thần/History: Khối chứa Ghi chú sạch sẽ */
+.history-container {
+    background-color: #f1f3f6; /* Nền xám nhạt */
+    height: 120px;
+    overflow-y: auto;
+    border-radius: 12px;
     padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #ffd700;
-    text-align: center;
+    border: 1px solid #e1e4e8;
 }
 
 .history-entry {
-    border-left: 2px solid #ffd700;
+    border-left: 3px solid #0056D2; /* Nhấn màu xanh ở lề */
     padding-left: 10px;
-    margin-bottom: 5px;
-    font-size: 0.9em;
+    margin-bottom: 8px;
+    font-size: 0.95em;
 }
 
 .note-time {
-    color: #888;
-    font-size: 0.8em;
+    color: #666;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+/* 5. Điểm nhấn Mắt Thần (Khách xem): Dùng màu vàng cam nổi bật trên nền trắng */
+.customer-view-log {
+    color: #f57c00; 
+    font-weight: bold;
+}
+
+/* 6. Action Button (Các nút Tel/RC/SMS): Bo góc sạch sẽ */
+.stLinkButton {
+    background-color: #f8fafd;
+    color: #0056D2;
+    border-radius: 8px;
+    border: 1px solid #eaeaea;
+}
+
+/* 7. Input: Làm mờ đường viền mặc định */
+.stTextInput > div > div > input {
+    border-radius: 10px;
+    border: 1px solid #eaeaea;
+}
+
+/* 8. Metric Card: Sạch sẽ */
+[data-testid="stMetricValue"] {
+    color: #0056D2;
 }
