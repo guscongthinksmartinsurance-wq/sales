@@ -27,3 +27,18 @@
     border-bottom: 2px solid #00a9e0;
     padding-bottom: 10px;
 }
+/* Thu nhỏ ô Upload file */
+[data-testid="stFileUploader"] {
+    padding-bottom: 0rem;
+}
+[data-testid="stFileUploader"] section {
+    padding: 0.5rem 1rem; /* Giảm khoảng cách đệm bên trong */
+    min-height: 80px !important; /* Ép chiều cao nhỏ lại */
+}
+[data-testid="stFileUploader"] label {
+    font-size: 14px !important; /* Font chữ tiêu đề nhỏ lại */
+    margin-bottom: 5px;
+}
+[data-testid="stFileUploader"] section > div {
+    display: none; /* Ẩn bớt các dòng chữ hướng dẫn rườm rà */
+}
