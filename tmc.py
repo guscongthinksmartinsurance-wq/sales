@@ -200,10 +200,45 @@ elif selected == "Cấu Hình":
             conn.commit(); conn.close(); st.success("Đã lưu!"); st.rerun()
 
 elif selected == "Mắt Thần":
-    st.markdown("<h2>👁️ Theo dõi Real-time</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#0f172a;'>👁️ Hệ Thống Mắt Thần Real-time</h2>", unsafe_allow_html=True)
+    st.info("Theo dõi những khách hàng đang truy cập hệ thống và lịch sử tương tác mới nhất.")
+    
     conn = sqlite3.connect(DB_NAME)
-    df_eye = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%KHÁCH ĐANG XEM%' ORDER BY last_updated DESC", conn)
-    for _, row in df_eye.iterrows():
-        with st.container(border=True):
-            st.write(f"Khách: **{row['name']}** ({row['cell']})"); st.markdown(row['note'], unsafe_allow_html=True)
+    # Lấy những Lead có tương tác "KHÁCH ĐANG XEM" trong 24h qua hoặc có cập nhật mới nhất
+    query = """
+        SELECT * FROM leads 
+        WHERE note LIKE '%KHÁCH ĐANG XEM%' 
+        OR last_updated >= date('now', '-1 day')
+        ORDER BY last_updated DESC
+    """
+    df_eye = pd.read_sql(query, conn)
+    
+    if df_eye.empty:
+        st.write("Hiện chưa có hoạt động mới nào từ khách hàng.")
+    else:
+        for _, row in df_eye.iterrows():
+            with st.container():
+                # Tạo giao diện Timeline bằng CSS nhẹ
+                st.markdown(f"""
+                <div style="background: white; padding: 20px; border-radius: 12px; border-left: 5px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 18px; font-weight: 700; color: #1e293b;">
+                            👤 {row['name']} <span style="font-size: 13px; font-weight: 400; color: #64748b; margin-left: 10px;">({row['cell']})</span>
+                        </div>
+                        <div style="background: #fee2e2; color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">
+                            ĐANG TRUY CẬP
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; color: #475569; font-size: 14px;">
+                        📍 Bang: <b>{row['state']}</b> | 👤 Quản lý: <b>{row['owner']}</b>
+                    </div>
+                    <div style="margin-top: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                        <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 5px;">HÀNH VI MỚI NHẤT</div>
+                        <div style="line-height: 1.6;">{row['note']}</div>
+                    </div>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <a href="tel:{row['cell']}" style="text-decoration: none; color: #0369a1; font-size: 13px; font-weight: 600;">📞 Gọi ngay cho khách</a>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
     conn.close()
