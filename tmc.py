@@ -107,64 +107,61 @@ if id_khach:
 # --- NỘI DUNG CÁC TRANG QUẢN TRỊ ---
 if selected == "Trang Chủ":
     st.markdown("""
-        <div class="hero-section">
-            <div class="hero-title">NATIONAL LIFE GROUP</div>
-            <div class="hero-subtitle">Mang lại sự bình yên và thịnh vượng cho mọi gia đình từ năm 1848</div>
+        <div class="hero-banner">
+            <h1>NATIONAL LIFE GROUP</h1>
+            <p>Experience the Peace of Mind Since 1848</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. Giới thiệu National Life & IUL
-    col_img, col_info = st.columns([1, 1.2], gap="large")
-
-    with col_img:
-        # Logo uy tín của hãng
-        st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", width=300)
-        st.image("https://www.nationallife.com/img/National-Life-Group-Foundation.jpg", use_container_width=True)
-        st.markdown("""
-            <div style="background-color: #00a9e0; color: white; padding: 20px; border-radius: 15px; margin-top: 20px;">
-                <h4 style="margin:0;">Hơn 170 năm kinh nghiệm</h4>
-                <p style="margin:0; font-size: 14px;">Một trong những tập đoàn tài chính lâu đời nhất Hoa Kỳ.</p>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with col_info:
-        st.markdown('<div class="content-card">', unsafe_allow_html=True)
-        st.markdown('<p class="section-title">Giải Pháp IUL Thông Minh</p>', unsafe_allow_html=True)
+    # 2. Nội dung giới thiệu (Dùng Columns để dàn trang đẹp hơn)
+    st.markdown('<div class="info-section">', unsafe_allow_html=True)
+    
+    col_text, col_img = st.columns([1.2, 1], gap="large")
+    
+    with col_text:
+        st.markdown('<p class="section-header">Giải Pháp IUL Cho Gia Đình Việt</p>', unsafe_allow_html=True)
         st.write("""
-            Giải pháp **Indexed Universal Life (IUL)** của National Life Group không chỉ là một hợp đồng bảo hiểm, 
-            mà là một kế hoạch tài chính toàn diện dành cho người Việt tại Mỹ:
-            
-            - **Bảo vệ trọn đời:** Đảm bảo tương lai cho người thân yêu trước mọi biến cố.
-            - **Tích lũy linh hoạt:** Tiền mặt tích lũy dựa trên chỉ số thị trường chứng khoán nhưng được bảo vệ 0% sàn (không lỗ vốn).
-            - **Rút tiền không thuế:** Tận dụng nguồn tiền tích lũy cho hưu trí hoặc học vấn con cái mà không phải lo lắng về thuế.
-            - **Quyền lợi sống:** Nhận quyền lợi bảo hiểm ngay cả khi còn sống nếu gặp các bệnh hiểm nghèo hoặc tai nạn.
+        Tại TMC Financial, chúng tôi mang đến giải pháp **Indexed Universal Life (IUL)** từ National Life Group - tập đoàn tài chính uy tín hàng đầu Hoa Kỳ. 
+        Sản phẩm này được thiết kế để bảo vệ những gì quan trọng nhất đối với bạn.
+        """)
+        
+        # Dùng Markdown thay vì Icon cho sạch
+        st.markdown("""
+        **- Bảo vệ trọn đời:** Quyền lợi tử vong đảm bảo tài chính cho gia đình.
+        **- Tích lũy không thuế:** Tối ưu hóa dòng tiền hưu trí trong tương lai.
+        **- Bảo vệ 0% sàn:** Tài khoản tích lũy không bao giờ bị lỗ khi thị trường đi xuống.
+        **- Quyền lợi sống:** Nhận tiền bồi thường khi gặp bệnh hiểm nghèo ngay cả khi còn sống.
         """)
         
         st.divider()
         
-        # Phần Đăng nhập được thiết kế tinh tế lại
+        # Phần đăng nhập nằm gọn gàng, kín đáo
         if not st.session_state.authenticated:
-            with st.expander("TRUY CẬP HỆ THỐNG NỘI BỘ"):
-                u = st.text_input("Tên đăng nhập")
-                p = st.text_input("Mật khẩu", type="password")
-                if st.button("XÁC NHẬN ĐĂNG NHẬP", use_container_width=True):
+            with st.popover("🔑 Truy cập hệ thống quản trị"):
+                u = st.text_input("Username", key="login_user")
+                p = st.text_input("Password", type="password", key="login_pass")
+                if st.button("Đăng Nhập", use_container_width=True):
                     if u == "Cong" and p == "admin123":
                         st.session_state.authenticated = True
                         st.session_state.role = "Admin"
                         st.session_state.username = "Cong"
                         st.rerun()
                     else:
-                        st.error("Thông tin đăng nhập chưa chính xác.")
-        else:
-            st.success(f"Đang đăng nhập: {st.session_state.username}")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+                        st.error("Sai thông tin đăng nhập!")
+    
+    with col_img:
+        # Thay link ảnh bằng link ổn định hơn hoặc logo to rõ
+        st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+        st.image("https://images.unsplash.com/photo-1509059852496-f3822ae057bf?auto=format&fit=crop&w=800&q=80", 
+                 caption="Tương lai của bạn là sứ mệnh của chúng tôi", use_container_width=True)
 
-    # 3. Phần chân trang (Footer) đơn giản
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 3. Footer sạch sẽ - Không có chữ "Đang đăng nhập"
     st.markdown("""
-        <div style="text-align: center; color: #888; font-size: 13px;">
-            © 2026 TMC Financial System | Được ủy quyền bởi National Life Group
+        <div style="background-color: #00263e; color: white; text-align: center; padding: 40px; margin-top: 60px;">
+            <p style="margin:0;">© 2026 TMC Financial System</p>
+            <p style="font-size: 12px; opacity: 0.6;">Authorized Representative of National Life Group</p>
         </div>
     """, unsafe_allow_html=True)
 
