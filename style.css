@@ -1,27 +1,24 @@
 /* style.css */
-/* Nền toàn bộ App màu xanh nước biển nhạt */
 .stApp {
-    background-color: #e3f2fd; 
-    color: #1a1a1a;
+    background-color: #eef2f6; /* Xanh biển nhạt cực nhẹ */
 }
-
-/* Menu Sidebar màu xám nhạt */
 [data-testid="stSidebar"] {
-    background-color: #f5f5f5;
-    border-right: 1px solid #ddd;
+    background-color: #f0f2f6; /* Xám nhạt chuyên nghiệp */
 }
-
-/* Các khối nội dung màu trắng cho nổi bật trên nền xanh */
-[data-testid="stVerticalBlock"] > div > div > div[data-testid="stVerticalBlock"] {
-    background-color: #ffffff;
-    padding: 20px;
+.main-card {
+    background-color: white;
+    padding: 25px;
     border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
 }
-
-.history-entry {
-    border-left: 4px solid #0056D2;
-    padding-left: 10px;
-    margin-bottom: 10px;
-    background: #fcfcfc;
+.tmc-title {
+    color: #0056D2;
+    font-weight: 800;
+}
+.history-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+    border-left: 5px solid #0056D2;
 }
