@@ -12,7 +12,7 @@ st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
 
-# Load CSS
+# Load CSS từ file style.css
 try:
     with open("style.css") as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
@@ -30,7 +30,7 @@ def init_db():
     # Bảng Profile
     c.execute('''CREATE TABLE IF NOT EXISTS profile (id INTEGER PRIMARY KEY, slogan TEXT)''')
     
-    # Tự động thêm các cột lưu ảnh nếu chưa có
+    # Cơ chế tự động thêm cột để tránh lỗi KeyError khi nâng cấp
     cols = [('logo_app', 'TEXT'), ('img_national', 'TEXT'), ('img_iul', 'TEXT')]
     for col_name, col_type in cols:
         try: c.execute(f"ALTER TABLE profile ADD COLUMN {col_name} {col_type}")
@@ -55,6 +55,7 @@ def get_profile():
 prof = get_profile()
 
 with st.sidebar:
+    # Hiển thị Logo App từ phần Cấu hình
     logo_app = prof.get('logo_app')
     if logo_app and os.path.exists(logo_app):
         st.image(logo_app, use_container_width=True)
@@ -78,7 +79,7 @@ with st.sidebar:
     else:
         selected = "Trang Chủ"
 
-# --- 3. LOGIC TẦNG KHÁCH HÀNG (ƯU TIÊN) ---
+# --- 3. TẦNG KHÁCH HÀNG (Nhận diện qua link ?id=...) ---
 query_params = st.query_params
 id_khach = query_params.get("id")
 
@@ -87,7 +88,7 @@ if id_khach:
     conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM leads WHERE phone = ?", (id_khach,)).fetchone()
     if row:
-        # Ghi log mắt thần
+        # MẮT THẦN: Ghi log khi khách xem link
         t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
         view_log = f"<div class='history-entry'><span class='note-time'>{t_now}</span> <span style='color:#f57c00; font-weight:bold;'>🔥 KHÁCH ĐANG XEM</span></div>"
         if "KHÁCH ĐANG XEM" not in str(row['note'])[:150]:
@@ -99,16 +100,24 @@ if id_khach:
         st.markdown(f"<h1 style='color:#00263e;'>🛡️ Chào {row['name']}</h1>", unsafe_allow_html=True)
         img_i = prof.get('img_iul')
         if img_i and os.path.exists(img_i): st.image(img_i, use_container_width=True)
+        st.info("Kế hoạch tài chính cá nhân hóa của bạn từ National Life Group.")
     conn.close()
     st.stop()
 
-# --- 4. CÁC HÀM HIỂN THỊ GIAO DIỆN ---
+# --- 4. CÁC HÀM HIỂN THỊ TỪNG PHẦN ---
 
 def show_home_page():
-    # Banner chính
+    # Ép CSS để xóa sạch ô trắng và giãn cách đều
+    st.markdown("""
+        <style>
+        [data-testid="column"] { width: 100% !important; flex: 1 1 calc(50% - 1rem) !important; }
+        .main-card img { width: 100% !important; border-radius: 10px; }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown('<div class="hero-banner"><h1>NATIONAL LIFE GROUP</h1><p>Experience the Peace of Mind Since 1848</p></div>', unsafe_allow_html=True)
     
-    col_left, col_right = st.columns(2, gap="large")
+    col_left, col_right = st.columns(2, gap="small")
 
     with col_left:
         st.markdown('<div class="main-card">', unsafe_allow_html=True)
@@ -118,7 +127,7 @@ def show_home_page():
             st.image(img_n, use_container_width=True)
         else:
             st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
-        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848, mang đến giải pháp bảo vệ tài chính bền vững.")
+        st.write("National Life Group là biểu tượng tin cậy tại Hoa Kỳ từ năm 1848, mang đến các giải pháp bảo vệ tài chính bền vững.")
         st.markdown("- **Uy tín:** 170+ năm hoạt động.\n- **Cam kết:** Giữ trọn lời hứa.\n- **Vững mạnh:** Top đầu tài chính.")
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -145,18 +154,18 @@ def show_home_page():
                     st.session_state.authenticated, st.session_state.role, st.session_state.username = True, "Admin", "Cong"
                     st.rerun()
 
-# --- 5. ĐIỀU HƯỚNG CHÍNH ---
+# --- 5. ĐIỀU HƯỚNG MENU CHÍNH ---
 
 if selected == "Trang Chủ":
     show_home_page()
 
 elif selected == "Mắt Thần":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👁️ THEO DÕI REAL-TIME</h2></div>", unsafe_allow_html=True)
-    st.info("Phân hệ Mắt Thần đang sẵn sàng để anh chỉnh sửa tính năng.")
+    st.info("Phần tính năng Mắt Thần đang sẵn sàng để anh chỉnh sửa.")
 
 elif selected == "Vận Hành":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>⚙️ QUẢN LÝ HỆ THỐNG</h2></div>", unsafe_allow_html=True)
-    st.info("Phân hệ Vận Hành đang sẵn sàng để anh chỉnh sửa tính năng.")
+    st.info("Phần tính năng Vận Hành đang sẵn sàng để anh chỉnh sửa.")
 
 elif selected == "Cấu Hình":
     st.markdown("<div class='main-card'><h2 style='color:#00263e;'>👤 CÀI ĐẶT HỆ THỐNG</h2></div>", unsafe_allow_html=True)
@@ -164,7 +173,7 @@ elif selected == "Cấu Hình":
         st.markdown("### 📝 Thay đổi Slogan")
         new_slogan = st.text_input("Slogan dòng IUL", value=prof.get('slogan'), label_visibility="collapsed")
         st.write("---")
-        st.markdown("### 🖼️ Cập nhật Hình ảnh")
+        st.markdown("### 🖼️ Cập nhật Hình ảnh (Nhỏ gọn)")
         c1, c2, c3 = st.columns(3)
         with c1: up_logo = st.file_uploader("Logo Sidebar", type=["png", "jpg"], key="up_l")
         with c2: up_nat = st.file_uploader("Ảnh National Life", type=["png", "jpg"], key="up_n")
