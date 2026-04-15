@@ -6,33 +6,34 @@ import pytz
 import os
 import base64
 
-# --- 1. CẤU HÌNH HỆ THỐNG ---
+# --- 1. CẤU HÌNH & CSS ELITE ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
 
-# CSS Elite: Tập trung vào Card và độ thoáng
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #f1f5f9; }
     
+    /* Card danh sách siêu phẳng */
     .client-card {
-        background: white; padding: 25px; border-radius: 15px;
-        border: 1px solid #e2e8f0; margin-bottom: 5px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        background: white; padding: 15px 25px; border-radius: 12px;
+        border: 1px solid #e2e8f0; margin-bottom: 8px;
+        display: flex; align-items: center; justify-content: space-between;
     }
-    .name-link { font-size: 20px; font-weight: 800; color: #00263e !important; text-decoration: none; }
-    .id-link { color: #0ea5e9 !important; font-weight: 700; text-decoration: none; }
+    .client-info { display: flex; gap: 30px; align-items: center; flex: 7; }
+    .name-link { font-size: 18px; font-weight: 800; color: #00263e !important; text-decoration: none; }
+    .id-link { color: #0ea5e9 !important; font-weight: 700; text-decoration: none; font-size: 15px; }
+    .meta-text { color: #64748b; font-size: 13px; font-weight: 500; }
     
-    .home-card {
-        background: white; border-radius: 20px; overflow: hidden;
-        border: 1px solid #e2e8f0; min-height: 520px; text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    }
-    .home-img-container { height: 320px; width: 100%; overflow: hidden; }
-    .home-img-container img { width: 100%; height: 100%; object-fit: cover; }
+    /* Nhóm Icon hành động */
+    .action-group { display: flex; gap: 15px; align-items: center; flex: 3; justify-content: flex-end; }
+    .icon-btn { font-size: 20px; text-decoration: none !important; }
+
+    /* Fix uploader Streamlit */
+    [data-testid="stFileUploader"] { padding: 0 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -53,14 +54,9 @@ def get_prof():
     conn.close()
     return dict(res) if res else {'slogan': 'Sâu sắc - Tận tâm - Chuyên nghiệp'}
 
-def to_b64(path):
-    if path and os.path.exists(path):
-        with open(path, "rb") as f: return base64.b64encode(f.read()).decode()
-    return ""
-
 prof = get_prof()
 
-# --- 3. TẦNG KHÁCH HÀNG (MỞ FILE PDF) ---
+# --- TẦNG KHÁCH HÀNG ---
 id_khach = st.query_params.get("id")
 if id_khach:
     conn = sqlite3.connect(DB_NAME); conn.row_factory = sqlite3.Row
@@ -71,103 +67,82 @@ if id_khach:
         conn.execute("UPDATE leads SET note=?, last_updated=? WHERE cell=?", (new_n, datetime.now(NY_TZ).isoformat(), id_khach))
         conn.commit()
         if row['pdf_file']:
-            st.markdown(f"## 🛡️ Xin chào {row['name']}")
-            st.info("Hồ sơ minh họa của bạn đã sẵn sàng bên dưới:")
-            st.download_button("📂 BẤM ĐỂ XEM HỒ SƠ PDF", data=row['pdf_file'], file_name=f"Minh_Hoa_{row['name']}.pdf", mime="application/pdf", use_container_width=True)
+            st.download_button("📂 XEM HỒ SƠ PDF", data=row['pdf_file'], file_name=f"{row['name']}_IUL.pdf", mime="application/pdf", use_container_width=True)
     conn.close(); st.stop()
 
-# --- 4. SIDEBAR ---
+# --- SIDEBAR ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 with st.sidebar:
-    logo = prof.get('logo_app')
-    st.image(logo if logo and os.path.exists(logo) else "https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
+    st.image("https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
     if st.session_state.auth:
-        selected = st.radio("QUẢN LÝ", ["Trang Chủ", "Vận Hành", "Mắt Thần", "Cấu Hình"])
+        selected = st.radio("MENU", ["Trang Chủ", "Vận Hành", "Mắt Thần", "Cấu Hình"])
         if st.button("🚪 Đăng xuất"): st.session_state.auth = False; st.rerun()
     else: selected = "Trang Chủ"
 
-# --- 5. VẬN HÀNH ---
+# --- 4. VẬN HÀNH (BẢN TINH GỌN TUYỆT ĐỐI) ---
 if selected == "Vận Hành":
     conn = sqlite3.connect(DB_NAME); df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    t_m1, t_m2 = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
+    t1, t2 = st.tabs(["📊 DANH SÁCH", "➕ THÊM MỚI"])
     
-    with t_m1:
+    with t1:
         for idx, row in df.iterrows():
             with st.container():
+                # Card 1 hàng duy nhất
                 st.markdown(f"""
                 <div class="client-card">
-                    <a href="tel:{row['cell']}" class="name-link">👤 {row['name']}</a> <br>
-                    <div style="margin-top:8px; font-size:14px; color:#64748b;">
-                        Mã CRM: <a href="{row['crm_link']}" target="_blank" class="id-link">{row['crm_id']}</a> | 
-                        Cell: <b>{row['cell']}</b> | 
-                        Work: <a href="tel:{row['work']}" style="color:#64748b; text-decoration:none;"><b>{row['work']}</b></a>
+                    <div class="client-info">
+                        <a href="tel:{row['cell']}" class="name-link">👤 {row['name']}</a>
+                        <a href="{row['crm_link']}" target="_blank" class="id-link">🆔 {row['crm_id']}</a>
+                        <a href="tel:{row['work']}" class="meta-text" style="text-decoration:none;">🏢 {row['work']}</a>
+                        <div class="meta-text">📍 {row['state']} | 👤 {row['owner']} | 🏷️ {row['status']}</div>
                     </div>
-                    <div style="margin-top:10px; display:flex; gap:20px;">
-                        <a href="rcmobile://sms?number={row['cell']}" style="text-decoration:none; font-size:24px;">💬</a>
-                        <a href="mailto:{row['email']}" style="text-decoration:none; font-size:24px;">✉️</a>
-                        <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting_{row['name']}" target="_blank" style="text-decoration:none; font-size:24px;">📅</a>
+                    <div class="action-group">
+                        <a href="rcmobile://sms?number={row['cell']}" class="icon-btn">💬</a>
+                        <a href="mailto:{row['email']}" class="icon-btn">✉️</a>
+                        <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting_{row['name']}" target="_blank" class="icon-btn">📅</a>
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
-                # SỬ DỤNG TABS CHO TOÀN BỘ CHỨC NĂNG - TRIỆT TIÊU CHỒNG CHỮ
-                sub_t1, sub_t2, sub_t3 = st.tabs(["📝 GHI CHÚ", "📁 PDF HỒ SƠ", "⚙️ SỬA"])
-                
-                with sub_t1:
-                    with st.form(f"nt_{row['id']}", clear_on_submit=True):
-                        ni = st.text_input("Ghi chú mới", placeholder="Nhập tại đây...")
-                        if st.form_submit_button("LƯU"):
-                            n_n = f"<div>{datetime.now(NY_TZ).strftime('%H:%M')} {ni}</div>" + str(row['note'])
-                            conn.execute("UPDATE leads SET note=? WHERE id=?", (n_n, row['id'])); conn.commit(); st.rerun()
-                    st.write(row['note'], unsafe_allow_html=True)
-                
-                with sub_t2:
-                    st.write("🔗 **Link gửi cho khách:**")
+                # CÁC NÚT HỆ THỐNG GỌN GÀNG TRONG POPOVER (FIX CHỒNG CHỮ)
+                c_link, c_nt, c_up, c_ed = st.columns([3, 2, 2, 2])
+                with c_link:
                     st.code(f"https://tmc-elite.streamlit.app/?id={row['cell']}")
-                    c_v, c_u = st.columns(2)
-                    with c_v:
-                        if row['pdf_file']:
-                            st.success("✅ Đã có file")
-                            st.download_button("👁️ MỞ XEM FILE", data=row['pdf_file'], file_name=f"Check_{row['name']}.pdf", key=f"v_{row['id']}")
-                        else: st.warning("⚠️ Chưa có file")
-                    with c_u:
-                        f = st.file_uploader("Upload PDF mới", type="pdf", key=f"up_{row['id']}")
-                        if st.button("XÁC NHẬN LƯU", key=f"btn_{row['id']}"):
+                with c_nt:
+                    with st.popover("📝 NOTE"):
+                        with st.form(f"nt_{row['id']}", clear_on_submit=True):
+                            txt = st.text_input("Ghi chú nhanh")
+                            if st.form_submit_button("LƯU"):
+                                n_n = f"<div>{datetime.now(NY_TZ).strftime('%H:%M')} {txt}</div>" + str(row['note'])
+                                conn.execute("UPDATE leads SET note=? WHERE id=?", (n_n, row['id'])); conn.commit(); st.rerun()
+                with c_up:
+                    with st.popover("📁 PDF"):
+                        f = st.file_uploader("Upload", type="pdf", key=f"f_{row['id']}")
+                        if st.button("SAVE", key=f"b_{row['id']}"):
                             if f: conn.execute("UPDATE leads SET pdf_file=? WHERE id=?", (f.read(), row['id'])); conn.commit(); st.success("Xong!"); st.rerun()
-                
-                with sub_t3:
-                    with st.form(f"e_{row['id']}"):
-                        ca, cb, cc = st.columns(3)
-                        un = ca.text_input("Tên", row['name']); ui = cb.text_input("ID", row['crm_id']); ul = cc.text_input("Link", row['crm_link'])
-                        uc = ca.text_input("Cell", row['cell']); uw = cb.text_input("Work", row['work']); ue = cc.text_input("Email", row['email'])
-                        us = ca.text_input("State", row['state']); uo = cb.text_input("Owner", row['owner']); ut = cc.text_input("Tags", row['tags'])
-                        if st.form_submit_button("CẬP NHẬT"):
-                            conn.execute("UPDATE leads SET name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=? WHERE id=?", (un, ui, ul, uc, uw, ue, us, uo, ut, row['id'])); conn.commit(); st.rerun()
-                st.markdown("---")
-
-    with t_m2:
-        with st.form("add"):
-            st.markdown("### ➕ THÊM MỚI (10 TRƯỜNG)")
-            c1, c2, c3 = st.columns(3)
-            an = c1.text_input("Tên"); ai = c2.text_input("ID"); al = c3.text_input("Link CRM")
-            ac = c1.text_input("Cell"); aw = c2.text_input("Work"); ae = c3.text_input("Email")
-            as_ = c1.text_input("State"); ao = c2.text_input("Owner", value="Cong"); at = c3.text_input("Tags")
-            if st.form_submit_button("LƯU MỚI"):
-                conn.execute("INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)", (an, ai, al, ac, aw, ae, as_, ao, at, datetime.now(NY_TZ).isoformat()))
-                conn.commit(); st.success("Đã thêm!"); st.rerun()
+                with c_ed:
+                    with st.popover("⚙️ EDIT"):
+                        with st.form(f"e_{row['id']}"):
+                            un = st.text_input("Tên", row['name']); ui = st.text_input("ID", row['crm_id']); ul = st.text_input("Link", row['crm_link'])
+                            uc = st.text_input("Cell", row['cell']); uw = st.text_input("Work", row['work']); ue = st.text_input("Email", row['email'])
+                            us = st.text_input("State", row['state']); uo = st.text_input("Owner", row['owner']); ut = st.text_input("Tags", row['tags'])
+                            if st.form_submit_button("CẬP NHẬT"):
+                                conn.execute("UPDATE leads SET name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=? WHERE id=?", (un, ui, ul, uc, uw, ue, us, uo, ut, row['id'])); conn.commit(); st.rerun()
     conn.close()
 
-# --- TRANG CHỦ & CẤU HÌNH ---
+# --- TRANG CHỦ & CẤU HÌNH PHỤC HỒI ĐẦY ĐỦ ---
 elif selected == "Trang Chủ":
-    st.markdown(f"<h1 style='text-align:center; padding:30px;'>{prof.get('slogan')}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align:center; color:#00263e;'>{prof.get('slogan')}</h1>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
-    b_nat = to_b64(prof.get('img_national'))
-    b_iul = to_b64(prof.get('img_iul'))
+    def get_img(p): 
+        if p and os.path.exists(p):
+            with open(p, "rb") as f: return base64.b64encode(f.read()).decode()
+        return ""
     with c1:
-        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_nat}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>National Life Group</h3><p>Uy tín từ 1848.</p></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:white; padding:15px; border-radius:15px; border:1px solid #e2e8f0; text-align:center;'><h3>National Life Group</h3><img src='data:image/jpeg;base64,{get_img(prof.get('img_national'))}' style='width:100%; border-radius:10px; height:300px; object-fit:cover;'><p style='margin-top:10px; color:#64748b;'>Uy tín từ 1848.</p></div>", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_iul}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>Giải pháp IUL</h3><p>{prof.get('slogan')}</p></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:white; padding:15px; border-radius:15px; border:1px solid #e2e8f0; text-align:center;'><h3>Giải pháp IUL</h3><img src='data:image/jpeg;base64,{get_img(prof.get('img_iul'))}' style='width:100%; border-radius:10px; height:300px; object-fit:cover;'><p style='margin-top:10px; color:#64748b;'>{prof.get('slogan')}</p></div>", unsafe_allow_html=True)
     if not st.session_state.auth:
-        with st.expander("🔐 LOGIN"):
+        with st.expander("🔐 Đăng nhập"):
             u = st.text_input("User"); p = st.text_input("Pass", type="password")
             if st.button("OK"):
                 if u == "Cong" and p == "admin123": st.session_state.auth = True; st.rerun()
@@ -177,8 +152,7 @@ elif selected == "Cấu Hình":
         sl = st.text_input("Slogan", value=prof.get('slogan'))
         c1, c2, c3 = st.columns(3); ul = c1.file_uploader("Logo"); un = c2.file_uploader("Ảnh Nat"); ui = c3.file_uploader("Ảnh IUL")
         if st.form_submit_button("LƯU"):
-            conn = sqlite3.connect(DB_NAME)
-            conn.execute("UPDATE profile SET slogan=? WHERE id=1", (sl,))
+            conn = sqlite3.connect(DB_NAME); conn.execute("UPDATE profile SET slogan=? WHERE id=1", (sl,))
             if ul: 
                 with open("logo_app.png", "wb") as f: f.write(ul.getbuffer())
                 conn.execute("UPDATE profile SET logo_app='logo_app.png' WHERE id=1")
@@ -189,9 +163,3 @@ elif selected == "Cấu Hình":
                 with open("img_iul.jpg", "wb") as f: f.write(ui.getbuffer())
                 conn.execute("UPDATE profile SET img_iul='img_iul.jpg' WHERE id=1")
             conn.commit(); conn.close(); st.cache_data.clear(); st.rerun()
-
-elif selected == "Mắt Thần":
-    conn = sqlite3.connect(DB_NAME); df = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%ĐANG XEM%' ORDER BY last_updated DESC LIMIT 15", conn)
-    for _, row in df.iterrows():
-        st.error(f"🔥 Khách {row['name']} đang xem hồ sơ!")
-    conn.close()
