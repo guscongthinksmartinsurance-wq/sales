@@ -7,28 +7,41 @@ import os
 import urllib.parse
 import base64
 
-# --- 1. CẤU HÌNH HỆ THỐNG ---
+# --- 1. CẤU HÌNH & CSS ---
 st.set_page_config(page_title="TMC ELITE SYSTEM", layout="wide")
 NY_TZ = pytz.timezone('America/New_York')
 DB_NAME = "tmc_database.db"
 
-# CSS Elite: Tập trung vào thẩm mỹ Card, bỏ qua các tùy chỉnh Expander gây lỗi
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
     .stApp { background-color: #f1f5f9; }
     
+    /* Card Khách hàng */
     .client-card {
-        background: white; padding: 25px; border-radius: 15px;
+        background: white; padding: 20px; border-radius: 12px;
         border: 1px solid #e2e8f0; margin-bottom: 5px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.02);
     }
     .name-link { font-size: 20px; font-weight: 800; color: #00263e !important; text-decoration: none; }
     .id-link { color: #0ea5e9 !important; font-weight: 700; text-decoration: none; }
-    .meta-info { color: #64748b; font-size: 14px; margin-top: 5px; }
     
-    /* Trang chủ Card Elite */
+    /* Tabs nội bộ sạch sẽ */
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { 
+        background-color: #f8fafc; border-radius: 5px; padding: 5px 15px; border: 1px solid #e2e8f0; font-weight: 600;
+    }
+    
+    /* Nút Copy Link chuyên nghiệp */
+    .copy-btn {
+        background-color: #10b981; color: white !important; border: none;
+        padding: 8px 15px; border-radius: 6px; font-weight: 700; cursor: pointer;
+        display: inline-block; font-size: 13px; margin-top: 10px;
+    }
+    .copy-btn:hover { background-color: #059669; }
+
+    /* Home Card */
     .home-card {
         background: white; border-radius: 20px; overflow: hidden;
         border: 1px solid #e2e8f0; min-height: 520px; text-align: center;
@@ -37,6 +50,16 @@ st.markdown("""
     .home-img-container { height: 320px; width: 100%; overflow: hidden; }
     .home-img-container img { width: 100%; height: 100%; object-fit: cover; }
     </style>
+    
+    <script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            alert('Đã copy đường link PDF! Anh hãy dán vào tin nhắn gửi cho khách nhé.');
+        }, function(err) {
+            console.error('Không thể copy: ', err);
+        });
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 # --- 2. HÀM DATABASE ---
@@ -63,130 +86,130 @@ def to_b64(path):
 
 prof = get_prof()
 
-# --- 3. TẦNG KHÁCH HÀNG (MẮT THẦN) ---
+# --- 3. TẦNG KHÁCH HÀNG (DÀNH CHO KHÁCH NHẬN LINK) ---
 id_khach = st.query_params.get("id")
 if id_khach:
     conn = sqlite3.connect(DB_NAME); conn.row_factory = sqlite3.Row
     row = conn.execute("SELECT * FROM leads WHERE cell = ?", (id_khach,)).fetchone()
     if row:
         t_now = datetime.now(NY_TZ).strftime('[%m/%d %H:%M]')
-        new_n = f"<div>{t_now} 🔥 ĐANG XEM PDF</div>" + str(row['note'])
+        new_n = f"<div>{t_now} 🔥 KHÁCH ĐANG XEM PDF TRỰC TUYẾN</div>" + str(row['note'])
         conn.execute("UPDATE leads SET note=?, last_updated=? WHERE cell=?", (new_n, datetime.now(NY_TZ).isoformat(), id_khach))
         conn.commit()
         if row['pdf_file']:
-            st.markdown(f"## 🛡️ Xin chào {row['name']}")
-            st.download_button("📂 MỞ HỒ SƠ MINH HỌA PDF", data=row['pdf_file'], file_name=f"IUL_{row['name']}.pdf", mime="application/pdf", use_container_width=True)
+            st.markdown(f"<h2 style='text-align:center;'>Hồ sơ của: {row['name']}</h2>", unsafe_allow_html=True)
+            st.download_button("📂 BẤM ĐỂ MỞ/TẢI FILE PDF MINH HỌA", data=row['pdf_file'], file_name=f"MinhHoa_{row['name']}.pdf", mime="application/pdf", use_container_width=True)
     conn.close(); st.stop()
 
-# --- 4. SIDEBAR ---
+# --- 4. SIDEBAR QUẢN TRỊ ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 with st.sidebar:
     logo = prof.get('logo_app')
     st.image(logo if logo and os.path.exists(logo) else "https://www.nationallife.com/img/Logo-National-Life-Group.png", use_container_width=True)
     if st.session_state.auth:
-        selected = st.radio("MENU CHÍNH", ["Trang Chủ", "Vận Hành", "Mắt Thần", "Cấu Hình"])
+        selected = st.radio("QUẢN LÝ", ["Trang Chủ", "Vận Hành", "Mắt Thần", "Cấu Hình"])
         if st.button("🚪 Đăng xuất"): st.session_state.auth = False; st.rerun()
     else: selected = "Trang Chủ"
 
-# --- 5. VẬN HÀNH (SỬ DỤNG TABS NỘI BỘ) ---
+# --- 5. VẬN HÀNH (BẢN TABS SIÊU SẠCH) ---
 if selected == "Vận Hành":
     conn = sqlite3.connect(DB_NAME); df = pd.read_sql("SELECT * FROM leads ORDER BY id DESC", conn)
-    t1, t2 = st.tabs(["📊 DANH SÁCH KHÁCH HÀNG", "➕ THÊM HỒ SƠ MỚI"])
+    t_main1, t_main2 = st.tabs(["📊 DANH SÁCH KHÁCH", "➕ THÊM HỒ SƠ"])
     
-    with t1:
+    with t_main1:
         for idx, row in df.iterrows():
             with st.container():
-                # Card thông tin chính - Nhúng link trực tiếp
+                # Thông tin nhúng link trực tiếp
                 st.markdown(f"""
                 <div class="client-card">
                     <a href="tel:{row['cell']}" class="name-link">👤 {row['name']}</a> <br>
-                    <div class="meta-info">
+                    <div style="margin-top:8px; font-size:14px; color:#64748b;">
                         Mã CRM: <a href="{row['crm_link']}" target="_blank" class="id-link">{row['crm_id']}</a> | 
                         Cell: <b>{row['cell']}</b> | 
-                        Work: <a href="tel:{row['work']}" style="color:#64748b; text-decoration:none; font-weight:600;">🏢 Work: {row['work']}</a>
+                        Work: <a href="tel:{row['work']}" style="color:#64748b; text-decoration:none;"><b>{row['work']}</b></a>
                     </div>
-                    <div class="meta-info">
-                        Email: {row['email']} | Bang: {row['state']} | Phụ trách: {row['owner']} | Tags: {row['tags']} | Status: <b>{row['status']}</b>
-                    </div>
-                    <div style="margin-top:15px; display:flex; gap:20px;">
+                    <div style="margin-top:10px; display:flex; gap:20px;">
                         <a href="rcmobile://sms?number={row['cell']}" style="text-decoration:none; font-size:24px;">💬</a>
                         <a href="mailto:{row['email']}" style="text-decoration:none; font-size:24px;">✉️</a>
                         <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting_{row['name']}" target="_blank" style="text-decoration:none; font-size:24px;">📅</a>
-                        <code style="background:#e2f3eb; color:#10b981; padding:5px 10px; border-radius:5px; font-weight:700;">{row['cell']}</code>
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
-                # HỆ THỐNG TABS NỘI BỘ THAY THẾ EXPANDER (DỨT ĐIỂM CHỒNG CHỮ)
-                st.markdown("#### Thao tác hồ sơ:")
-                sub_t1, sub_t2, sub_t3 = st.tabs(["📝 Ghi chú & Nhật ký", "📁 Hồ sơ PDF", "⚙️ Sửa thông tin"])
+                # HỆ THỐNG TABS KHÔNG CHỒNG CHỮ
+                sub_t1, sub_t2, sub_t3 = st.tabs(["📝 GHI CHÚ", "🔗 GỬI PDF CHO KHÁCH", "⚙️ SỬA HỒ SƠ"])
                 
                 with sub_t1:
                     with st.form(f"nt_{row['id']}", clear_on_submit=True):
-                        ni = st.text_input("Nội dung ghi chú mới")
-                        if st.form_submit_button("LƯU NHẬT KÝ"):
+                        ni = st.text_input("Ghi chú mới", placeholder="Khách vừa trao đổi gì...")
+                        if st.form_submit_button("LƯU"):
                             n_n = f"<div>{datetime.now(NY_TZ).strftime('%H:%M')} {ni}</div>" + str(row['note'])
                             conn.execute("UPDATE leads SET note=? WHERE id=?", (n_n, row['id'])); conn.commit(); st.rerun()
-                    st.info("Lịch sử:")
                     st.write(row['note'], unsafe_allow_html=True)
                 
                 with sub_t2:
-                    col_view, col_up = st.columns(2)
-                    with col_view:
-                        st.write("🔍 Trạng thái PDF:")
+                    col_info, col_up = st.columns(2)
+                    with col_info:
                         if row['pdf_file']:
-                            st.success("✅ Đã có file trên hệ thống")
-                            st.download_button("👁️ XEM FILE PDF HIỆN TẠI", data=row['pdf_file'], file_name=f"Check_{row['name']}.pdf", key=f"view_{row['id']}")
+                            st.success("✅ ĐÃ CÓ PDF")
+                            st.download_button("👁️ XEM FILE (Dành cho anh)", data=row['pdf_file'], file_name=f"Check_{row['name']}.pdf", key=f"v_{row['id']}")
+                            # NÚT COPY THỰC THỤ ĐỂ GỬI KHÁCH
+                            link_khach = f"https://tmc-elite.streamlit.app/?id={row['cell']}"
+                            st.markdown(f"""
+                                <button class="copy-btn" onclick="copyToClipboard('{link_khach}')">
+                                    🚀 SAO CHÉP LINK GỬI KHÁCH
+                                </button>
+                                <div style='font-size:11px; color:#94a3b8; margin-top:5px;'>Link: {link_khach}</div>
+                            """, unsafe_allow_html=True)
                         else:
-                            st.warning("⚠️ Chưa có file PDF")
+                            st.warning("⚠️ CHƯA CÓ FILE")
                     with col_up:
-                        f = st.file_uploader("Cập nhật file PDF mới", type="pdf", key=f"up_{row['id']}")
-                        if st.button("XÁC NHẬN TẢI LÊN", key=f"btn_{row['id']}"):
-                            if f: conn.execute("UPDATE leads SET pdf_file=? WHERE id=?", (f.read(), row['id'])); conn.commit(); st.success("Đã cập nhật!"); st.rerun()
+                        f = st.file_uploader("Upload PDF mới", type="pdf", key=f"up_{row['id']}")
+                        if st.button("LƯU VÀO DATABASE", key=f"btn_{row['id']}"):
+                            if f: conn.execute("UPDATE leads SET pdf_file=? WHERE id=?", (f.read(), row['id'])); conn.commit(); st.success("Xong!"); st.rerun()
                 
                 with sub_t3:
                     with st.form(f"e_{row['id']}"):
                         ca, cb, cc = st.columns(3)
-                        un = ca.text_input("Tên", row['name']); ui = cb.text_input("ID", row['crm_id']); ul = cc.text_input("Link", row['crm_link'])
+                        un = ca.text_input("Tên", row['name']); ui = cb.text_input("ID", row['crm_id']); ul = cc.text_input("Link CRM", row['crm_link'])
                         uc = ca.text_input("Cell", row['cell']); uw = cb.text_input("Work", row['work']); ue = cc.text_input("Email", row['email'])
                         us = ca.text_input("State", row['state']); uo = cb.text_input("Owner", row['owner']); ut = cc.text_input("Tags", row['tags'])
-                        ust = st.selectbox("Status", ["New", "Contacted", "Following", "Closed"], index=0)
                         if st.form_submit_button("CẬP NHẬT 10 TRƯỜNG"):
-                            conn.execute("UPDATE leads SET name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=?, status=? WHERE id=?", (un, ui, ul, uc, uw, ue, us, uo, ut, ust, row['id'])); conn.commit(); st.rerun()
+                            conn.execute("UPDATE leads SET name=?, crm_id=?, crm_link=?, cell=?, work=?, email=?, state=?, owner=?, tags=? WHERE id=?", (un, ui, ul, uc, uw, ue, us, uo, ut, row['id'])); conn.commit(); st.rerun()
                 st.markdown("---")
 
-    with t2:
-        with st.form("add_new"):
-            st.markdown("### ➕ THIẾT LẬP HỒ SƠ MỚI (ĐỦ 10 TRƯỜNG)")
+    with t_main2:
+        with st.form("add"):
+            st.markdown("### ➕ THIẾT LẬP HỒ SƠ (10 TRƯỜNG)")
             c1, c2, c3 = st.columns(3)
-            an = c1.text_input("Họ tên"); ai = c2.text_input("CRM ID"); al = c3.text_input("Link CRM")
-            ac = c1.text_input("Cell số"); aw = c2.text_input("Work số"); ae = c3.text_input("Email")
-            as_ = c1.text_input("State (Bang)"); ao = c2.text_input("Owner", value="Cong"); at = c3.text_input("Tags")
-            if st.form_submit_button("LƯU HỒ SƠ VÀO HỆ THỐNG"):
+            an = c1.text_input("Tên"); ai = c2.text_input("ID"); al = c3.text_input("Link")
+            ac = c1.text_input("Cell"); aw = c2.text_input("Work"); ae = c3.text_input("Email")
+            as_ = c1.text_input("State"); ao = c2.text_input("Owner", value="Cong"); at = c3.text_input("Tags")
+            if st.form_submit_button("LƯU MỚI"):
                 conn.execute("INSERT INTO leads (name, crm_id, crm_link, cell, work, email, state, owner, tags, last_updated) VALUES (?,?,?,?,?,?,?,?,?,?)", (an, ai, al, ac, aw, ae, as_, ao, at, datetime.now(NY_TZ).isoformat()))
-                conn.commit(); st.success("Đã thêm thành công!"); st.rerun()
+                conn.commit(); st.success("Đã thêm!"); st.rerun()
     conn.close()
 
+# --- TRANG CHỦ & CẤU HÌNH ---
 elif selected == "Trang Chủ":
     st.markdown(f"<h1 style='text-align:center; padding:30px;'>{prof.get('slogan')}</h1>", unsafe_allow_html=True)
     c1, c2 = st.columns(2, gap="large")
     b_nat = to_b64(prof.get('img_national'))
     b_iul = to_b64(prof.get('img_iul'))
     with c1:
-        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_nat}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>National Life Group</h3><p>Đồng hành cùng cộng đồng người Việt từ năm 1848. Giải pháp bảo vệ tài chính bền vững.</p></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_nat}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>National Life Group</h3><p>Uy tín từ 1848.</p></div></div>", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_iul}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>Giải pháp IUL</h3><p>{prof.get('slogan')}. Tích lũy thông minh cho tương lai.</p></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='home-card'><div class='home-img-container'><img src='data:image/jpeg;base64,{b_iul}' onerror='this.src=\"https://via.placeholder.com/600x300\"'></div><div style='padding:25px;'><h3>Giải pháp IUL</h3><p>{prof.get('slogan')}</p></div></div>", unsafe_allow_html=True)
     if not st.session_state.auth:
-        with st.expander("🔐 QUẢN TRỊ VIÊN"):
-            u = st.text_input("Username"); p = st.text_input("Password", type="password")
-            if st.button("ĐĂNG NHẬP"):
+        with st.expander("🔐 LOGIN"):
+            u = st.text_input("User"); p = st.text_input("Pass", type="password")
+            if st.button("OK"):
                 if u == "Cong" and p == "admin123": st.session_state.auth = True; st.rerun()
 
 elif selected == "Cấu Hình":
-    st.markdown("## ⚙️ Cấu hình giao diện")
     with st.form("conf"):
-        sl = st.text_input("Slogan thương hiệu", value=prof.get('slogan'))
-        c1, c2, c3 = st.columns(3); ul = c1.file_uploader("Logo Sidebar"); un = c2.file_uploader("Ảnh National"); ui = c3.file_uploader("Ảnh IUL")
-        if st.form_submit_button("LƯU CẤU HÌNH"):
+        sl = st.text_input("Slogan", value=prof.get('slogan'))
+        c1, c2, c3 = st.columns(3); ul = c1.file_uploader("Logo"); un = c2.file_uploader("Ảnh Nat"); ui = c3.file_uploader("Ảnh IUL")
+        if st.form_submit_button("LƯU"):
             conn = sqlite3.connect(DB_NAME)
             conn.execute("UPDATE profile SET slogan=? WHERE id=1", (sl,))
             if ul: 
@@ -201,8 +224,7 @@ elif selected == "Cấu Hình":
             conn.commit(); conn.close(); st.cache_data.clear(); st.rerun()
 
 elif selected == "Mắt Thần":
-    st.markdown("## 👁️ Mắt Thần Real-time")
     conn = sqlite3.connect(DB_NAME); df = pd.read_sql("SELECT * FROM leads WHERE note LIKE '%ĐANG XEM%' ORDER BY last_updated DESC LIMIT 15", conn)
     for _, row in df.iterrows():
-        st.error(f"🔥 Khách {row['name']} đang xem hồ sơ! | ID: {row['crm_id']}")
+        st.error(f"🔥 Khách {row['name']} đang xem hồ sơ!")
     conn.close()
